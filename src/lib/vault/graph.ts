@@ -172,7 +172,7 @@ async function leggiReport(): Promise<ReportInfo> {
 
 const R_CORE = 9;
 const R_MAX = 95;
-const TWIST = 2.7; // torsione della spirale in radianti dal centro al bordo
+const TWIST = 3.05; // torsione della spirale in radianti dal centro al bordo
 const N_BRACCI = 10;
 
 function slotAngolo(slot: number): number {
@@ -458,7 +458,7 @@ async function costruisci(): Promise<GalaxyPayload> {
         stars.pos[pIdx * 3 + 1],
         stars.pos[pIdx * 3 + 2],
       ];
-      const rLoc = 1.6 + rnd() * 3.4;
+      const rLoc = 1.1 + rnd() * 2.3;
       const a = rnd() * Math.PI * 2;
       pos = [
         base[0] + Math.cos(a) * rLoc,
@@ -533,7 +533,7 @@ async function costruisci(): Promise<GalaxyPayload> {
       .filter((h) => h.livello >= 2 && h.livello <= 3)
       .forEach((h, i) => {
         const rnd = rngDa("sez:" + nota.rel + "#" + i);
-        const rLoc = 0.6 + rnd() * 1.5;
+        const rLoc = 0.45 + rnd() * 1.05;
         const a = rnd() * Math.PI * 2;
         const idxSez = aggiungiStar({
           id: "s:" + nota.rel + "#" + i,

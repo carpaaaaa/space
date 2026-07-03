@@ -1,0 +1,103 @@
+"use client";
+
+import { create } from "zustand";
+import type { Galassia } from "@/lib/galassia";
+
+export type Pannello =
+  | "galassia"
+  | "oggi"
+  | "progetti"
+  | "finanze"
+  | "inbox"
+  | "log"
+  | "ricerca"
+  | "comando";
+
+export interface Filtri {
+  /** area key -> visibile */
+  aree: Record<string, boolean>;
+  soloGod: boolean;
+  soloGap: boolean;
+  filamenti: boolean;
+  sezioni: boolean;
+}
+
+export interface VolaA {
+  /** indice stella (o null per tornare a casa) */
+  idx: number | null;
+  /** contatore per ritriggerare l'effetto */
+  n: number;
+}
+
+interface UIState {
+  pannello: Pannello;
+  setPannello: (p: Pannello) => void;
+
+  notaAperta: string | null;
+  apriNota: (rel: string) => void;
+  chiudiNota: () => void;
+
+  hover: number | null;
+  setHover: (i: number | null) => void;
+  selezione: number | null;
+  setSelezione: (i: number | null) => void;
+
+  filtri: Filtri;
+  setFiltri: (f: Partial<Filtri>) => void;
+  toggleArea: (key: string) => void;
+
+  volaA: VolaA;
+  vola: (idx: number | null) => void;
+
+  vaultVersion: number;
+  bumpVault: () => void;
+
+  galassiaPronta: boolean;
+  setGalassiaPronta: (v: boolean) => void;
+
+  /** dataset caricato (per ricerca/vola-a fuori dal canvas) */
+  galassia: Galassia | null;
+  setGalassia: (g: Galassia | null) => void;
+}
+
+export const useUI = create<UIState>((set) => ({
+  pannello: "galassia",
+  setPannello: (p) => set({ pannello: p }),
+
+  notaAperta: null,
+  apriNota: (rel) => set({ notaAperta: rel }),
+  chiudiNota: () => set({ notaAperta: null, selezione: null }),
+
+  hover: null,
+  setHover: (i) => set({ hover: i }),
+  selezione: null,
+  setSelezione: (i) => set({ selezione: i }),
+
+  filtri: {
+    aree: {},
+    soloGod: false,
+    soloGap: false,
+    filamenti: false,
+    sezioni: true,
+  },
+  setFiltri: (f) => set((s) => ({ filtri: { ...s.filtri, ...f } })),
+  toggleArea: (key) =>
+    set((s) => ({
+      filtri: {
+        ...s.filtri,
+        aree: { ...s.filtri.aree, [key]: !(s.filtri.aree[key] ?? true) },
+      },
+    })),
+
+  volaA: { idx: null, n: 0 },
+  vola: (idx) => set((s) => ({ volaA: { idx, n: s.volaA.n + 1 } })),
+
+  vaultVersion: 0,
+  bumpVault: () => set((s) => ({ vaultVersion: s.vaultVersion + 1 })),
+
+  galassiaPronta: false,
+  setGalassiaPronta: (v) => set({ galassiaPronta: v }),
+
+  galassia: null,
+  setGalassia: (g) => set({ galassia: g }),
+}));
