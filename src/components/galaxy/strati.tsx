@@ -243,6 +243,59 @@ export function PolvereBracci({ tinte }: { tinte: TemaGalassia }) {
   );
 }
 
+/**
+ * Fondale di scena: riproduce dentro il canvas il gradiente radiale caldo del
+ * body (il post-processing richiede un canvas opaco, quindi il CSS dietro non
+ * si vede piu). I colori arrivano dai token del tema, non sono hardcoded.
+ */
+export function SfondoScena({ fondo, fondo2 }: { fondo: string; fondo2: string }) {
+  const { geom, mat } = useMemo(() => {
+    // triangolo fullscreen in NDC, disegnato per primo e mai in depth
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)
+    );
+    const m = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = position.xy * 0.5 + 0.5;
+          gl_Position = vec4(position.xy, 1.0, 1.0);
+        }
+      `,
+      // stesso gradiente del body: radial 120% x 90% at 50% 38%, stop a 68%
+      fragmentShader: /* glsl */ `
+        varying vec2 vUv;
+        uniform vec3 uFondo;
+        uniform vec3 uFondo2;
+        void main() {
+          vec2 d = (vUv - vec2(0.5, 0.62)) / vec2(1.2, 0.9);
+          float t = clamp(length(d) / 0.68, 0.0, 1.0);
+          gl_FragColor = vec4(mix(uFondo2, uFondo, t), 1.0);
+        }
+      `,
+      uniforms: {
+        uFondo: { value: new THREE.Vector3(...rgb(fondo)) },
+        uFondo2: { value: new THREE.Vector3(...rgb(fondo2)) },
+      },
+      depthWrite: false,
+      depthTest: false,
+    });
+    return { geom: gg, mat: m };
+  }, [fondo, fondo2]);
+
+  useEffect(
+    () => () => {
+      geom.dispose();
+      mat.dispose();
+    },
+    [geom, mat]
+  );
+
+  return <mesh geometry={geom} material={mat} renderOrder={-10} frustumCulled={false} />;
+}
+
 /** Campo stelle ambientale: scenografia, dichiaratamente non-dato. */
 export function SfondoAmbientale() {
   const { geom, mat } = useMemo(() => {

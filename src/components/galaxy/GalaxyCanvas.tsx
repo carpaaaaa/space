@@ -8,7 +8,8 @@ import { useUI } from "@/state/store";
 import { ControlliCamera } from "./camera";
 import { Filamenti } from "./filamenti";
 import { Picker } from "./picker";
-import { Nucleo, PolvereBracci, SfondoAmbientale, StratoStelle } from "./strati";
+import { Nucleo, PolvereBracci, SfondoAmbientale, SfondoScena, StratoStelle } from "./strati";
+import { EffettiScena } from "./postfx";
 import { EtichetteOverlay, MappaEtichette, PonteEtichette, TooltipStella } from "./etichette";
 
 function useMedia(queryCss: string): boolean {
@@ -77,12 +78,21 @@ export default function GalaxyCanvas() {
     <div className="absolute inset-0">
       {g && (
         <Canvas
-          dpr={mobile ? [1, 1.75] : [1, 2]}
+          // linear + flat: gli shader scrivono gia colori pronti per lo schermo;
+          // senza, il pass finale del composer li ri-encoderebbe (tutto slavato).
+          linear
+          flat
+          // dpr contenuto: il bloom mipmap costa per pixel, 1.75x basta
+          dpr={mobile ? [1, 1.5] : [1, 1.75]}
           camera={{ fov: 55, near: 0.5, far: 2400, position: [4, 210, 290] }}
-          gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
+          // canvas opaco: il post-processing non compone bene sopra alpha 0;
+          // il gradiente del body e riprodotto da SfondoScena. L'antialias del
+          // canvas non agisce sui buffer del composer: multisampling in postfx.
+          gl={{ antialias: false, powerPreference: "high-performance", alpha: false }}
           style={{ position: "absolute", inset: 0 }}
         >
           <ControlliCamera g={g} ridotto={ridotto} />
+          <SfondoScena fondo={tema.vars["--fondo"]} fondo2={tema.vars["--fondo-2"]} />
           <SfondoAmbientale />
           <PolvereBracci tinte={tema.galassia} />
           <Nucleo ridotto={ridotto} tinte={tema.galassia} />
@@ -140,6 +150,7 @@ export default function GalaxyCanvas() {
           <Filamenti g={g} />
           <Picker g={g} />
           <PonteEtichette g={g} refs={etichetteRefs} />
+          <EffettiScena ridotto={ridotto} mobile={mobile} />
         </Canvas>
       )}
 
@@ -150,6 +161,13 @@ export default function GalaxyCanvas() {
         <div className="absolute inset-0 grid place-items-center">
           <p className="text-[13px]" style={{ color: "var(--inchiostro-2)" }}>
             Leggo il vault e accendo la galassia
+          </p>
+        </div>
+      )}
+      {g && g.n === 0 && inGalassia && (
+        <div className="absolute inset-0 grid place-items-center">
+          <p className="text-[13.5px]" style={{ color: "var(--inchiostro-2)" }}>
+            Il vault e ancora buio: la prima nota accende la prima stella.
           </p>
         </div>
       )}
