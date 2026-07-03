@@ -197,6 +197,8 @@ export function TooltipStella({ g }: { g: Galassia }) {
         transform: `translate(${aDestra ? "-100%" : "0"}, ${sotto ? "-100%" : "0"})`,
         zIndex: "var(--z-tooltip)",
         borderColor: area ? area.colore + "55" : undefined,
+        // stacca il tooltip dalla galassia illuminata dal bloom
+        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.45)",
       }}
     >
       <div className="flex items-baseline gap-2">
@@ -214,7 +216,7 @@ export function TooltipStella({ g }: { g: Galassia }) {
         <span>{NOME_KIND[kind]}</span>
         {tipo && <span>tipo: {tipo}</span>}
         {stato && <span>stato: {stato}</span>}
-        <span>{s.deg[hover]} conn.</span>
+        <span>{s.deg[hover] === 1 ? "1 collegamento" : `${s.deg[hover]} collegamenti`}</span>
       </div>
       {kind === K_GAP && (
         <p className="mt-1 text-[11.5px]" style={{ color: "var(--inchiostro-2)" }}>
