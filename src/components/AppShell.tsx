@@ -7,11 +7,19 @@ import { FiltriGalassia } from "@/components/hud/FiltriGalassia";
 import { CommandBar } from "@/components/hud/CommandBar";
 import { NotaDrawer } from "@/components/NotaDrawer";
 import { Pannelli } from "@/components/panels/Pannelli";
+import { ConsoleAgente } from "@/components/ConsoleAgente";
 import { useVaultEvents } from "@/components/hud/useVaultEvents";
+import { inviaComando } from "@/lib/agenteClient";
 
 const GalaxyCanvas = dynamic(() => import("@/components/galaxy/GalaxyCanvas"), {
   ssr: false,
 });
+
+const COMANDO_SMISTA =
+  "Sistema l'inbox: leggi 00_INBOX/Note da sistemare.md, smista ogni appunto nella nota giusta " +
+  "secondo le regole del vault (aggiorna note esistenti quando possibile, crea nuove note solo se " +
+  "servono), registra le spese nelle tabelle di 02_FINANZE, lascia traccia in Note sistemate, " +
+  "svuota solo le voci smistate e logga tutto.";
 
 export function AppShell() {
   useVaultEvents();
@@ -31,10 +39,13 @@ export function AppShell() {
       )}
 
       <NavRail />
-      <CommandBar />
+      <CommandBar agentePronto onComando={(testo) => inviaComando(testo)} />
       {pannello === "galassia" && <FiltriGalassia />}
-      {pannello !== "galassia" && <Pannelli />}
+      {pannello !== "galassia" && (
+        <Pannelli agentePronto onSmista={() => inviaComando(COMANDO_SMISTA)} />
+      )}
       <NotaDrawer />
+      <ConsoleAgente />
     </main>
   );
 }

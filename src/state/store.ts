@@ -2,6 +2,10 @@
 
 import { create } from "zustand";
 import { applicaFiltri, type Galassia } from "@/lib/galassia";
+import type { EventoAgente } from "@/lib/agent/sessione";
+
+/** Evento client-only: il comando dell'utente nel feed della console. */
+export type EventoConsole = EventoAgente | { t: "comando"; testo: string };
 
 export type Pannello =
   | "galassia"
@@ -60,6 +64,16 @@ interface UIState {
   /** dataset caricato (per ricerca/vola-a fuori dal canvas) */
   galassia: Galassia | null;
   setGalassia: (g: Galassia | null) => void;
+
+  /** console dell'agente */
+  consoleAperta: boolean;
+  agenteInEsecuzione: boolean;
+  feed: EventoConsole[];
+  apriConsole: () => void;
+  chiudiConsole: () => void;
+  pushFeed: (e: EventoConsole) => void;
+  svuotaFeed: () => void;
+  setAgenteInEsecuzione: (v: boolean) => void;
 }
 
 export const useUI = create<UIState>((set) => ({
@@ -114,4 +128,13 @@ export const useUI = create<UIState>((set) => ({
       if (g) applicaFiltri(g, s.filtri);
       return { galassia: g, filtriVersione: s.filtriVersione + 1 };
     }),
+
+  consoleAperta: false,
+  agenteInEsecuzione: false,
+  feed: [],
+  apriConsole: () => set({ consoleAperta: true }),
+  chiudiConsole: () => set({ consoleAperta: false }),
+  pushFeed: (e) => set((s) => ({ feed: [...s.feed, e] })),
+  svuotaFeed: () => set({ feed: [] }),
+  setAgenteInEsecuzione: (v) => set({ agenteInEsecuzione: v }),
 }));
