@@ -140,6 +140,7 @@ async function leggiReport(): Promise<ReportInfo> {
   let testo = "";
   try {
     testo = await fs.readFile(graphReportPath(), "utf8");
+    testo = testo.replace(/\r\n?/g, "\n");
   } catch {
     return info;
   }

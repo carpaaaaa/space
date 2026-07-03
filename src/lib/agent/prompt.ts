@@ -4,7 +4,8 @@ import { vaultPath } from "@/lib/vault/config";
 
 async function leggi(rel: string): Promise<string> {
   try {
-    return await fs.readFile(path.join(vaultPath(), rel), "utf8");
+    const raw = await fs.readFile(path.join(vaultPath(), rel), "utf8");
+    return raw.replace(/\r\n?/g, "\n");
   } catch {
     return `(file ${rel} non trovato)`;
   }

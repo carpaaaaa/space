@@ -34,6 +34,7 @@ export async function appendLog(azione: string, descrizione: string): Promise<st
   try {
     contenuto = await fs.readFile(assoluto, "utf8");
     if (contenuto.charCodeAt(0) === 0xfeff) contenuto = contenuto.slice(1);
+    contenuto = contenuto.replace(/\r\n?/g, "\n");
   } catch {
     contenuto = `---\ntipo: log\ncreata: ${data}\nai-first: true\n---\n\n# Log ${data}\n`;
   }
@@ -71,6 +72,7 @@ export async function quickCapture(testo: string): Promise<{ rel: string; log: s
   const assoluto = path.join(vaultPath(), rel);
   let raw = await fs.readFile(assoluto, "utf8");
   if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+  raw = raw.replace(/\r\n?/g, "\n");
 
   const riga = "- " + pulito.split("\n").join(" ").trim();
   const heading = "## Note da sistemare";

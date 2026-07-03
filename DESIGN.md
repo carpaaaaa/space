@@ -38,7 +38,7 @@ sistema #E8D5A8
 
 - Grana fotografica: overlay noise SVG, opacity 0.04-0.06, `pointer-events: none`.
 - Pannelli opachi (#100f14 al 96%) sopra galassia scurita; MAI backdrop blur decorativo.
-- Z-scale semantica: `--z-hud: 10, --z-pannello: 20, --z-drawer: 30, --z-modal: 40,
+- Z-scale semantica: `--z-pannello: 8, --z-hud: 10, --z-drawer: 30, --z-modal: 40,
   --z-toast: 50, --z-tooltip: 60`.
 
 ## Motion

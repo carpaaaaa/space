@@ -120,6 +120,9 @@ async function costruisci(): Promise<VaultSnapshot> {
     }
     // strip BOM difensivo (il vault li vieta ma non ci affidiamo)
     if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+    // normalizza CRLF/CR -> LF: le note scritte da Windows (Codex, sync)
+    // altrimenti rompono i parser a riga (in JS "." e "$" non gestiscono \r)
+    raw = raw.replace(/\r\n?/g, "\n");
 
     let fm: Record<string, unknown> = {};
     let body = raw;

@@ -39,8 +39,8 @@
   --area-logs: #979293;
   --area-sistema: #e8d5a8;
 
+  --z-pannello: 8;
   --z-hud: 10;
-  --z-pannello: 20;
   --z-drawer: 30;
   --z-modal: 40;
   --z-toast: 50;
