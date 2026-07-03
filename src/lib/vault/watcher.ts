@@ -1,6 +1,6 @@
 import chokidar, { FSWatcher } from "chokidar";
 import path from "node:path";
-import { vaultPath, CARTELLE_ESCLUSE } from "./config";
+import { vaultPath, cartelleEscluse } from "./config";
 
 export interface VaultEvent {
   tipo: "add" | "change" | "unlink";
@@ -32,10 +32,7 @@ function crea(): WatcherState {
         const rel = path.relative(root, p);
         if (rel.startsWith("..")) return false;
         const top = rel.split(path.sep)[0];
-        // graph.json vive sotto 08_AI: resta osservato.
-        if (CARTELLE_ESCLUSE.has(top) && top !== "_Templates") return true;
-        if (top === "_Templates") return true;
-        return false;
+        return cartelleEscluse().has(top);
       },
     }),
   };

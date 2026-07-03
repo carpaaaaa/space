@@ -154,7 +154,7 @@ export function PannelloOggi() {
   return (
     <div>
       <TestataPannello
-        titolo="Oggi"
+        titolo="Obiettivi"
         sotto={`Il polso del vault · ${dataItaliana(oggi)}`}
       />
       <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">

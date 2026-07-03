@@ -33,6 +33,9 @@ export function CommandBar({
   const vola = useUI((s) => s.vola);
   const apriNota = useUI((s) => s.apriNota);
   const setSelezione = useUI((s) => s.setSelezione);
+  const modelli = useUI((s) => s.modelli);
+  const modelloScelto = useUI((s) => s.modelloScelto);
+  const setModelloScelto = useUI((s) => s.setModelloScelto);
 
   // scorciatoia globale: premi / o cmd+k per cercare
   useEffect(() => {
@@ -146,8 +149,24 @@ export function CommandBar({
           aria-label="Barra comandi"
           className="h-11 w-full bg-transparent text-[14px] outline-none placeholder:text-[color:var(--inchiostro-3)]"
         />
+        {agentePronto && modelli.length > 0 && (
+          <select
+            value={modelloScelto ?? modelli[0].id}
+            onChange={(e) => setModelloScelto(e.target.value)}
+            aria-label="Modello dell'agente"
+            title="Modello usato per i comandi all'agente"
+            className="mono max-w-[150px] flex-none cursor-pointer rounded border bg-transparent px-1.5 py-0.5 text-[10.5px] outline-none"
+            style={{ borderColor: "var(--linea)", color: "var(--inchiostro-2)" }}
+          >
+            {modelli.map((m) => (
+              <option key={m.id} value={m.id} style={{ background: "var(--superficie)" }}>
+                {m.etichetta}
+              </option>
+            ))}
+          </select>
+        )}
         <kbd
-          className="mono rounded border px-1.5 py-0.5 text-[10px]"
+          className="mono rounded border px-1.5 py-0.5 text-[10px] max-md:hidden"
           style={{ borderColor: "var(--linea)", color: "var(--inchiostro-3)" }}
         >
           ⌘K

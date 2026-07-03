@@ -1,6 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { AREE, AreaDef, areaPerKey, graphJsonPath, graphReportPath } from "./config";
+import {
+  AreaDef,
+  areaPerKey,
+  cartelleEscluse,
+  getAree,
+  graphJsonPath,
+  graphReportPath,
+  prefissiEsclusi,
+} from "./config";
 import { NotaMeta, getSnapshot, risolviWikilink } from "./notes";
 import { memoPerVersione } from "./watcher";
 
@@ -226,6 +234,8 @@ function normLabel(s: string): string {
 
 async function costruisci(): Promise<GalaxyPayload> {
   const snap = await getSnapshot();
+  const { vaultPath } = await import("./config");
+  const vaultPathBase = vaultPath();
   const gjson = await leggiGraphJson();
   const report = await leggiReport();
 
@@ -245,7 +255,8 @@ async function costruisci(): Promise<GalaxyPayload> {
   };
   const edges: GalaxyEdge[] = [];
 
-  const areaIndice = new Map(AREE.map((a, i) => [a.key, i]));
+  const aree = getAree();
+  const areaIndice = new Map(aree.map((a, i) => [a.key, i]));
   const tipi: string[] = [];
   const stati: string[] = [];
   const idxTipo = (v?: string) => {
@@ -342,18 +353,39 @@ async function costruisci(): Promise<GalaxyPayload> {
   const entitaSuNota = new Map<string, string>(); // entityId -> nota rel (merge doc)
   const concetti: GNode[] = [];
   const documenti: GNode[] = [];
+  // nodi estratti da cartelle escluse (config Obsidian, artefatti): fuori
+  const escluse = cartelleEscluse();
+  const prefissi = prefissiEsclusi();
+  const fuoriPerimetro = (gn: GNode): boolean => {
+    const sf = (gn.source_file ?? gn.path ?? "").split("\\").join("/");
+    if (!sf) return false;
+    const rel = sf.startsWith("/") ? path.relative(vaultPathBase, sf) : sf;
+    if (rel.startsWith("..")) return false;
+    const top = rel.split("/")[0];
+    if (top.startsWith(".") || escluse.has(top)) return true;
+    return prefissi.some((p) => rel.startsWith(p));
+  };
+  const eNodoFile = (gn: GNode): boolean => {
+    const sf = gn.source_file ?? gn.path ?? "";
+    const base = sf.split(/[\\/]/).pop() ?? "";
+    return (
+      gn.label === base || gn.label === base.replace(/\.[^.]+$/, "")
+    );
+  };
   for (const gn of gNodes) {
-    if (gn.file_type === "document") {
-      const nota = notaDaSourceFile(gn.source_file ?? gn.path);
-      if (nota) {
-        entitaSuNota.set(gn.id, nota.rel);
-        gradoNota.set(nota.rel, (gradoNota.get(nota.rel) ?? 0) + (gradoEntita.get(gn.id) ?? 0));
-        continue;
-      }
-      documenti.push(gn);
-    } else {
-      concetti.push(gn);
+    if (fuoriPerimetro(gn)) continue;
+    const nota = notaDaSourceFile(gn.source_file ?? gn.path);
+    if (gn.file_type === "document" && nota && eNodoFile(gn)) {
+      // nodo-file: si fonde con la stella della nota (arricchisce il grado)
+      entitaSuNota.set(gn.id, nota.rel);
+      gradoNota.set(nota.rel, (gradoNota.get(nota.rel) ?? 0) + (gradoEntita.get(gn.id) ?? 0));
+      continue;
     }
+    if (!nota && gn.file_type === "document" && eNodoFile(gn)) {
+      documenti.push(gn); // file non-md (pdf, immagini) citati dal grafo
+      continue;
+    }
+    concetti.push(gn); // sezioni/entita: stelle minori attorno alla nota
   }
 
   /* ---- 3. stelle nota, per area, t dal grado (piu connessa = piu al centro) ---- */
@@ -365,7 +397,15 @@ async function costruisci(): Promise<GalaxyPayload> {
     perArea.set(n.areaKey, arr);
   }
 
-  const SLOT_POLVERE: Record<string, number> = { logs: 3.5, archivio: 8.5 };
+  // corsie di polvere: una per ogni area marcata polvere, sfalsate tra i bracci
+  const areePolvere = aree.filter((a) => a.polvere);
+  const SLOT_POLVERE = new Map(
+    areePolvere.map((a, i) => [
+      a.key,
+      (i * Math.max(1, Math.floor(10 / Math.max(1, areePolvere.length))) + 3.5) % 10,
+    ])
+  );
+  const pareLog = (key: string) => /log/i.test(key);
 
   for (const [areaKey, note] of perArea) {
     const area = areaPerKey(areaKey as never);
@@ -379,11 +419,11 @@ async function costruisci(): Promise<GalaxyPayload> {
       let flag = 0;
       if (areaKey === "sistema") {
         pos = puntoBulge(rnd);
-      } else if (areaKey === "logs" || areaKey === "archivio") {
+      } else if (area.polvere) {
         // corsie di polvere tra i bracci
-        const slot = SLOT_POLVERE[areaKey];
+        const slot = SLOT_POLVERE.get(areaKey) ?? 3.5;
         const t =
-          areaKey === "logs"
+          pareLog(areaKey)
             ? // log recenti verso il centro
               Math.min(0.95, 0.15 + (rank / Math.max(1, ordinate.length - 1)) * 0.8)
             : 0.2 + rnd() * 0.75;
@@ -508,8 +548,13 @@ async function costruisci(): Promise<GalaxyPayload> {
       id: "d:" + gn.id,
       label: gn.label,
       kind: KIND.documento,
-      areaKey: "archivio",
-      pos: puntoBraccio(8.5, 0.3 + rnd() * 0.6, rnd, 0.6),
+      areaKey: areePolvere[areePolvere.length - 1]?.key ?? "sistema",
+      pos: puntoBraccio(
+        SLOT_POLVERE.get(areePolvere[areePolvere.length - 1]?.key ?? "") ?? 8.5,
+        0.3 + rnd() * 0.6,
+        rnd,
+        0.6
+      ),
       size: 0.6 + Math.min(1.2, Math.sqrt(deg) * 0.25),
       deg,
       flag: FLAG.polvere,
@@ -520,9 +565,19 @@ async function costruisci(): Promise<GalaxyPayload> {
   }
 
   /* ---- 7. micro-stelle sezione (LOD, solo heading 2-3) ---- */
+  // il grafo Graphify puo gia contenere nodi-sezione: quelli vincono
+  // (portano community ed edge), le sezioni locali coprono solo il resto
+  const sezioniDaGrafo = new Set(
+    concetti
+      .map((gn) => {
+        const nota = notaDaSourceFile(gn.source_file ?? gn.path);
+        return nota ? nota.rel + "#" + normLabel(gn.label) : null;
+      })
+      .filter((x): x is string => x != null)
+  );
   let sezioni = 0;
   for (const nota of snap.notes) {
-    if (nota.areaKey === "logs") continue;
+    if (areaPerKey(nota.areaKey).polvere) continue;
     const pIdx = starPerRel.get(nota.rel);
     if (pIdx == null) continue;
     const base: [number, number, number] = [
@@ -532,6 +587,7 @@ async function costruisci(): Promise<GalaxyPayload> {
     ];
     nota.headings
       .filter((h) => h.livello >= 2 && h.livello <= 3)
+      .filter((h) => !sezioniDaGrafo.has(nota.rel + "#" + normLabel(h.testo)))
       .forEach((h, i) => {
         const rnd = rngDa("sez:" + nota.rel + "#" + i);
         const rLoc = 0.45 + rnd() * 1.05;
@@ -693,7 +749,7 @@ async function costruisci(): Promise<GalaxyPayload> {
   const { vaultVersion } = await import("./watcher");
   return {
     versione: vaultVersion(),
-    aree: AREE.map((a, i) => ({ ...a, indice: i })),
+    aree: aree.map((a, i) => ({ ...a, indice: i })),
     tipi,
     stati,
     community: [...communityConteggio.entries()]

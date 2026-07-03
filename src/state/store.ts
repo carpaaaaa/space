@@ -15,7 +15,53 @@ export type Pannello =
   | "inbox"
   | "log"
   | "ricerca"
+  | "aspetto"
   | "comando";
+
+export interface Aspetto {
+  tema: string;
+  /** moltiplicatore dimensione stelle (0.5 - 2) */
+  scalaStelle: number;
+  /** moltiplicatore intensita glow (0.4 - 1.6) */
+  glow: number;
+  /** durezza del bordo stella (1 morbida - 4 netta) */
+  durezza: number;
+  coloreMode: "area" | "mono" | "community";
+  autoRotazione: boolean;
+}
+
+export const ASPETTO_DEFAULT: Aspetto = {
+  tema: "ngc4414",
+  scalaStelle: 1,
+  glow: 1,
+  durezza: 2.4,
+  coloreMode: "area",
+  autoRotazione: true,
+};
+
+function leggiLocale<T>(chiave: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(chiave);
+    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function salvaLocale(chiave: string, valore: unknown): void {
+  try {
+    window.localStorage.setItem(chiave, JSON.stringify(valore));
+  } catch {
+    // storage pieno o negato: pazienza
+  }
+}
+
+export interface InfoModello {
+  id: string;
+  etichetta: string;
+  provider: "claude" | "openai";
+}
 
 export interface Filtri {
   /** area key -> visibile */
@@ -64,6 +110,17 @@ interface UIState {
   /** dataset caricato (per ricerca/vola-a fuori dal canvas) */
   galassia: Galassia | null;
   setGalassia: (g: Galassia | null) => void;
+
+  /** modelli agente configurati e scelta corrente */
+  modelli: InfoModello[];
+  setModelli: (m: InfoModello[]) => void;
+  modelloScelto: string | null;
+  setModelloScelto: (id: string) => void;
+
+  /** aspetto: tema + resa della galassia (persistito in localStorage) */
+  aspetto: Aspetto;
+  aspettoVersione: number;
+  setAspetto: (a: Partial<Aspetto>) => void;
 
   /** console dell'agente */
   consoleAperta: boolean;
@@ -129,12 +186,37 @@ export const useUI = create<UIState>((set) => ({
       return { galassia: g, filtriVersione: s.filtriVersione + 1 };
     }),
 
+  modelli: [],
+  setModelli: (m) => set({ modelli: m }),
+  modelloScelto:
+    typeof window === "undefined"
+      ? null
+      : window.localStorage.getItem("space.modello"),
+  setModelloScelto: (id) => {
+    try {
+      window.localStorage.setItem("space.modello", id);
+    } catch {
+      // ignora
+    }
+    set({ modelloScelto: id });
+  },
+
+  aspetto: leggiLocale("space.aspetto", ASPETTO_DEFAULT),
+  aspettoVersione: 0,
+  setAspetto: (a) =>
+    set((s) => {
+      const aspetto = { ...s.aspetto, ...a };
+      salvaLocale("space.aspetto", aspetto);
+      return { aspetto, aspettoVersione: s.aspettoVersione + 1 };
+    }),
+
   consoleAperta: false,
   agenteInEsecuzione: false,
   feed: [],
   apriConsole: () => set({ consoleAperta: true }),
   chiudiConsole: () => set({ consoleAperta: false }),
-  pushFeed: (e) => set((s) => ({ feed: [...s.feed, e] })),
+  // cap: il feed non cresce all'infinito nelle sessioni lunghe
+  pushFeed: (e) => set((s) => ({ feed: [...s.feed.slice(-499), e] })),
   svuotaFeed: () => set({ feed: [] }),
   setAgenteInEsecuzione: (v) => set({ agenteInEsecuzione: v }),
 }));

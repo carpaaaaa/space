@@ -1,57 +1,60 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { vaultPath } from "@/lib/vault/config";
+import { fileProtetti, fileRegole, getAree, vaultName, vaultPath } from "@/lib/vault/config";
 
-async function leggi(rel: string): Promise<string> {
+async function leggi(rel: string): Promise<string | null> {
   try {
     const raw = await fs.readFile(path.join(vaultPath(), rel), "utf8");
     return raw.replace(/\r\n?/g, "\n");
   } catch {
-    return `(file ${rel} non trovato)`;
+    return null;
   }
 }
 
 /**
- * System prompt dell'agente space: il manuale operativo del vault e la legge.
- * Include _CLAUDE.md + Mind - Organizzazione vault + index, come richiesto
- * dalle regole di Mind.
+ * System prompt dell'agente: le regole generali di space piu i manuali del
+ * vault (da space.config.json, o auto-rilevati: _CLAUDE.md, CLAUDE.md,
+ * AGENTS.md, index.md). Nessun riferimento personale hardcoded.
  */
 export async function systemPromptAgente(): Promise<string> {
-  const [manuale, organizzazione, indice] = await Promise.all([
-    leggi("_CLAUDE.md"),
-    leggi("Mind - Organizzazione vault.md"),
-    leggi("index.md"),
-  ]);
+  const regole = fileRegole();
+  const contenuti = await Promise.all(regole.map((f) => leggi(f)));
 
   const oggi = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   const dataISO = `${oggi.getFullYear()}-${p(oggi.getMonth() + 1)}-${p(oggi.getDate())}`;
   const ora = `${p(oggi.getHours())}:${p(oggi.getMinutes())}`;
 
-  return [
-    `Sei l'agente di space, il cockpit del vault Obsidian Mind di bozzo.`,
+  const areaLog = getAree().find((a) => a.polvere && /log/i.test(a.key));
+  const protetti = [...fileProtetti()].join(", ");
+
+  const sezioni: string[] = [
+    `Sei l'agente di space, il cockpit del vault Obsidian "${vaultName()}".`,
     `Lavori DENTRO il vault (la tua cwd). Data: ${dataISO}, ora: ${ora}.`,
     ``,
     `REGOLE VINCOLANTI:`,
-    `- Scrivi SEMPRE in italiano. Frontmatter con chiavi italiane (tipo/area/creata/aggiornata/stato). UTF-8 senza BOM.`,
-    `- Ogni scrittura valida va registrata in Logs/${dataISO}.md (append-only, formato "**HH:MM** - azione | descrizione", azioni: init create update move archive ingest health reconcile synthesize delete). Se il file del giorno manca, crealo con frontmatter tipo: log, creata: ${dataISO}, ai-first: true e titolo "# Log ${dataISO}".`,
-    `- Propagazione obbligatoria: nuova nota -> aggiorna index.md e l'hub dell'area; idea -> 07_IDEE; spesa/abbonamento -> tabelle di 02_FINANZE in ordine cronologico con valute separate; decisione -> sezione "## Decisioni" della nota progetto; task completata -> spostala nello storico della nota.`,
-    `- Prima di creare una nota, cerca duplicati (usa index.md qui sotto e Grep). Aggiorna una nota esistente quando il contenuto le appartiene.`,
-    `- Wikilink [[Nome Nota]] per persone/progetti/tool/concetti. Nei log usa i wikilink alle note toccate.`,
-    `- NON toccare Attachments/, CLAUDE.md, _CLAUDE.md, AGENTS.md, CODEX.md, GEMINI.md, ANTIGRAVITY.md, .obsidian/ salvo esplicita conferma dell'utente (il sistema chiedera conferma).`,
+    `- Scrivi nella stessa lingua usata dalle note del vault. UTF-8 senza BOM.`,
+    `- Rispetta le convenzioni dei manuali del vault riportati sotto (frontmatter, naming, propagazione): sono la legge. Se un manuale e assente, limita le scritture a cio che il comando chiede.`,
+    ...(areaLog
+      ? [
+          `- Ogni scrittura valida va registrata in ${areaLog.cartella}/${dataISO}.md (append-only, formato "**HH:MM** - azione | descrizione"). Se il file del giorno manca, crealo seguendo il formato dei file esistenti in ${areaLog.cartella}/.`,
+        ]
+      : []),
+    `- Prima di creare una nota, cerca duplicati (Grep/Glob). Aggiorna una nota esistente quando il contenuto le appartiene.`,
+    `- Wikilink [[Nome Nota]] per persone/progetti/tool/concetti.`,
+    `- NON toccare ${protetti} ne le cartelle di allegati o .obsidian/ senza conferma (il sistema la chiedera).`,
     `- NON cancellare note. NON spostare o rinominare piu di 3 note senza proporre prima il criterio.`,
-    `- Niente inglese nelle note, niente em-dash decorativi nel contenuto, niente tag inventati.`,
     `- Quando finisci, riassumi in 1-3 frasi cosa hai fatto e dove.`,
     ``,
     `Se il comando e ambiguo, fai la scelta piu ragionevole e dichiarala (l'utente non puo rispondere a domande durante l'esecuzione).`,
-    ``,
-    `=== MANUALE OPERATIVO (_CLAUDE.md) ===`,
-    manuale,
-    ``,
-    `=== ORGANIZZAZIONE VAULT (Mind - Organizzazione vault.md) ===`,
-    organizzazione,
-    ``,
-    `=== CATALOGO NOTE (index.md) ===`,
-    indice,
-  ].join("\n");
+  ];
+
+  regole.forEach((f, i) => {
+    const contenuto = contenuti[i];
+    if (contenuto) {
+      sezioni.push(``, `=== MANUALE DEL VAULT: ${f} ===`, contenuto);
+    }
+  });
+
+  return sezioni.join("\n");
 }

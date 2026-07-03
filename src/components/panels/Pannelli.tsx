@@ -7,6 +7,7 @@ import { PannelloFinanze } from "./PannelloFinanze";
 import { PannelloInbox } from "./PannelloInbox";
 import { PannelloLog } from "./PannelloLog";
 import { PannelloRicerca } from "./PannelloRicerca";
+import { PannelloAspetto } from "./PannelloAspetto";
 
 /** Contenitore dei pannelli operativi sopra la galassia. */
 export function Pannelli({
@@ -34,6 +35,7 @@ export function Pannelli({
         )}
         {pannello === "log" && <PannelloLog />}
         {pannello === "ricerca" && <PannelloRicerca />}
+        {pannello === "aspetto" && <PannelloAspetto />}
       </div>
     </section>
   );

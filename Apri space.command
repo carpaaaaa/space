@@ -38,8 +38,12 @@ fi
 
 echo "Avvio space…"
 [ -d node_modules ] || npm install
-echo "Preparo l'app…"
-npm run build || exit 1
+# ricompila solo se i sorgenti sono cambiati dall'ultima build
+# (space.config.json e .env.local si leggono a runtime: niente rebuild)
+if [ ! -f .next/BUILD_ID ] || [ -n "$(find src package.json next.config.ts -newer .next/BUILD_ID -print -quit 2>/dev/null)" ]; then
+  echo "Preparo l'app…"
+  npm run build || exit 1
+fi
 
 # Appena il server risponde, apri il browser.
 ( until curl -s http://localhost:3000 >/dev/null 2>&1; do sleep 1; done; open http://localhost:3000 ) &

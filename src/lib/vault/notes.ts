@@ -3,9 +3,9 @@ import path from "node:path";
 import matter from "gray-matter";
 import {
   AreaKey,
-  CARTELLE_ESCLUSE,
-  PREFISSI_ESCLUSI,
   areaDaPath,
+  cartelleEscluse,
+  prefissiEsclusi,
   vaultPath,
 } from "./config";
 import { memoPerVersione } from "./watcher";
@@ -86,6 +86,8 @@ function estraiEstratto(body: string): string {
 }
 
 async function* cammina(dir: string, root: string): AsyncGenerator<string> {
+  const escluse = cartelleEscluse();
+  const prefissi = prefissiEsclusi();
   const voci = await fs.readdir(dir, { withFileTypes: true });
   for (const voce of voci) {
     if (voce.name.startsWith(".")) continue;
@@ -93,11 +95,11 @@ async function* cammina(dir: string, root: string): AsyncGenerator<string> {
     const relVoce = path.relative(root, assoluto).split(path.sep).join("/");
     if (voce.isDirectory()) {
       const top = relVoce.split("/")[0];
-      if (CARTELLE_ESCLUSE.has(top)) continue;
-      if (PREFISSI_ESCLUSI.some((p) => (relVoce + "/").startsWith(p))) continue;
+      if (escluse.has(top)) continue;
+      if (prefissi.some((p) => (relVoce + "/").startsWith(p))) continue;
       yield* cammina(assoluto, root);
     } else if (voce.isFile() && voce.name.endsWith(".md")) {
-      if (PREFISSI_ESCLUSI.some((p) => relVoce.startsWith(p))) continue;
+      if (prefissi.some((p) => relVoce.startsWith(p))) continue;
       yield assoluto;
     }
   }
@@ -151,17 +153,21 @@ async function costruisci(): Promise<VaultSnapshot> {
       }
     }
 
+    // chiavi italiane del vault Mind, con fallback alle chiavi inglesi
+    // piu comuni nei vault Obsidian generici (template per altri utenti)
+    const primo = (...vv: unknown[]) => vv.find((v) => v != null);
     notes.push({
       rel,
       titolo: path.basename(rel, ".md"),
       areaKey: areaDaPath(rel).key,
-      tipo: fm.tipo != null ? String(fm.tipo) : undefined,
-      stato: fm.stato != null ? String(fm.stato) : undefined,
-      creata: normalizzaData(fm.creata),
-      aggiornata: normalizzaData(fm.aggiornata),
+      tipo: primo(fm.tipo, fm.type) != null ? String(primo(fm.tipo, fm.type)) : undefined,
+      stato:
+        primo(fm.stato, fm.status) != null ? String(primo(fm.stato, fm.status)) : undefined,
+      creata: normalizzaData(primo(fm.creata, fm.created, fm.date)),
+      aggiornata: normalizzaData(primo(fm.aggiornata, fm.updated, fm.modified)),
       tags: normalizzaTags(fm.tags),
       aliases: [
-        ...normalizzaTags(fm.aliases),
+        ...normalizzaTags(primo(fm.aliases, fm.alias)),
         ...(fm.nome ? [String(fm.nome)] : []),
         ...(fm["concept-originale"] ? [String(fm["concept-originale"])] : []),
       ],

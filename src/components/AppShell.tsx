@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useUI } from "@/state/store";
 import { NavRail } from "@/components/hud/NavRail";
@@ -10,6 +11,7 @@ import { NotaDrawer } from "@/components/NotaDrawer";
 import { Pannelli } from "@/components/panels/Pannelli";
 import { ConsoleAgente } from "@/components/ConsoleAgente";
 import { useVaultEvents } from "@/components/hud/useVaultEvents";
+import { applicaColoriAree, applicaTema, temaPerId } from "@/lib/temi";
 import { inviaComando } from "@/lib/agenteClient";
 
 const GalaxyCanvas = dynamic(() => import("@/components/galaxy/GalaxyCanvas"), {
@@ -17,14 +19,35 @@ const GalaxyCanvas = dynamic(() => import("@/components/galaxy/GalaxyCanvas"), {
 });
 
 const COMANDO_SMISTA =
-  "Sistema l'inbox: leggi 00_INBOX/Note da sistemare.md, smista ogni appunto nella nota giusta " +
-  "secondo le regole del vault (aggiorna note esistenti quando possibile, crea nuove note solo se " +
-  "servono), registra le spese nelle tabelle di 02_FINANZE, lascia traccia in Note sistemate, " +
-  "svuota solo le voci smistate e logga tutto.";
+  "Sistema l'inbox del vault: trova la nota degli appunti da smistare (es. 'Note da sistemare' " +
+  "nella cartella inbox), smista ogni appunto nella nota giusta secondo le regole dei manuali del " +
+  "vault (aggiorna note esistenti quando possibile, crea nuove note solo se servono), svuota solo " +
+  "le voci effettivamente smistate e registra l'operazione nel log del vault.";
 
 export function AppShell() {
   useVaultEvents();
   const pannello = useUI((s) => s.pannello);
+  const temaId = useUI((s) => s.aspetto.tema);
+  const galassia = useUI((s) => s.galassia);
+  const setModelli = useUI((s) => s.setModelli);
+
+  // tema -> token CSS
+  useEffect(() => {
+    applicaTema(temaPerId(temaId));
+  }, [temaId]);
+
+  // colori aree dal vault -> CSS var (--area-<key>), anche per vault generici
+  useEffect(() => {
+    if (galassia) applicaColoriAree(galassia.payload.aree);
+  }, [galassia]);
+
+  // modelli agente configurati
+  useEffect(() => {
+    fetch("/api/agent")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.modelli && setModelli(d.modelli))
+      .catch(() => {});
+  }, [setModelli]);
 
   return (
     <main className="relative h-dvh w-full overflow-hidden">

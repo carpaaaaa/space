@@ -3,47 +3,24 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { query, type PermissionResult, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { vaultPath } from "@/lib/vault/config";
+import {
+  fileProtetti,
+  getAree,
+  modelliAgente,
+  vaultPath,
+  type ModelloAgente,
+} from "@/lib/vault/config";
 import { systemPromptAgente } from "./prompt";
+import { eseguiOpenAI } from "./openai";
 
 const execFileAsync = promisify(execFile);
 
 /**
- * L'agente ha bisogno di UNA di queste credenziali:
- * - ANTHROPIC_API_KEY (o CLAUDE_CODE_OAUTH_TOKEN) in .env.local
- * - il login di Claude Code CLI su questo Mac (Keychain, claudeAiOauth)
- */
-async function credenzialiDisponibili(): Promise<boolean> {
-  if (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_CODE_OAUTH_TOKEN) return true;
-  if (process.platform !== "darwin") return false;
-  for (const servizio of ["Claude Code-credentials", "Claude Code"]) {
-    try {
-      const { stdout } = await execFileAsync(
-        "security",
-        ["find-generic-password", "-s", servizio, "-w"],
-        { timeout: 4000 }
-      );
-      const dati = JSON.parse(stdout.trim()) as { claudeAiOauth?: { accessToken?: string } };
-      if (dati.claudeAiOauth?.accessToken) return true;
-    } catch {
-      // item assente o non leggibile: si prova il prossimo
-    }
-  }
-  return false;
-}
-
-const MESSAGGIO_SETUP = [
-  "L'agente non ha credenziali su questo Mac. Serve un passo una-tantum, poi space funziona da solo:",
-  "1) col tuo abbonamento Claude: apri il Terminale, esegui `claude setup-token` e incolla il token in ~/Desktop/Cartella/space/.env.local come CLAUDE_CODE_OAUTH_TOKEN=... (se la CLI manca: npm i -g @anthropic-ai/claude-code, poi claude /login);",
-  "2) in alternativa: metti ANTHROPIC_API_KEY=sk-ant-... in .env.local.",
-  "Poi riavvia `npm run dev`. I pannelli e la galassia funzionano comunque: solo i comandi all'agente richiedono questo passo.",
-].join("\n");
-
-/**
- * Layer agente di space sopra il Claude Agent SDK.
- * - usa l'autenticazione locale di Claude Code (o ANTHROPIC_API_KEY se presente)
- * - lavora con cwd nel vault, strumenti file-only (niente Bash)
- * - le scritture sensibili passano da una conferma con diff (ask-first)
+ * Layer agente di space.
+ * - provider "claude": Claude Agent SDK (login Claude Code, setup-token o API key)
+ * - provider "openai": endpoint OpenAI-compatibile (Ollama/Hermes, LM Studio...)
+ * - in entrambi i casi: cwd nel vault, strumenti file-only, scritture sensibili
+ *   con conferma diff (ask-first), eventi NDJSON identici.
  */
 
 export type RigaDiff = { k: "+" | "-" | " "; testo: string };
@@ -65,6 +42,8 @@ export type EventoAgente =
   | { t: "fine"; ok: boolean; durataMs?: number; costoUsd?: number; risultato?: string }
   | { t: "errore"; messaggio: string };
 
+export type Emit = (e: EventoAgente) => void;
+
 interface PermessoPendente {
   resolve: (esito: { esito: "allow" | "deny"; messaggio?: string }) => void;
 }
@@ -73,14 +52,20 @@ interface StatoAgente {
   occupato: boolean;
   permessi: Map<string, PermessoPendente>;
   ultimaSessione: string | null;
+  abortCorrente: AbortController | null;
 }
 
-const G = globalThis as unknown as { __nucleoAgente?: StatoAgente };
+const G = globalThis as unknown as { __spaceAgente?: StatoAgente };
 function stato(): StatoAgente {
-  if (!G.__nucleoAgente) {
-    G.__nucleoAgente = { occupato: false, permessi: new Map(), ultimaSessione: null };
+  if (!G.__spaceAgente) {
+    G.__spaceAgente = {
+      occupato: false,
+      permessi: new Map(),
+      ultimaSessione: null,
+      abortCorrente: null,
+    };
   }
-  return G.__nucleoAgente;
+  return G.__spaceAgente;
 }
 
 export function agenteOccupato(): boolean {
@@ -104,6 +89,36 @@ export function risolviPermesso(
 }
 
 /* ------------------------------------------------------------------ */
+/* Credenziali Claude                                                  */
+/* ------------------------------------------------------------------ */
+
+async function credenzialiClaude(): Promise<boolean> {
+  if (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_CODE_OAUTH_TOKEN) return true;
+  if (process.platform !== "darwin") return false;
+  for (const servizio of ["Claude Code-credentials", "Claude Code"]) {
+    try {
+      const { stdout } = await execFileAsync(
+        "security",
+        ["find-generic-password", "-s", servizio, "-w"],
+        { timeout: 4000 }
+      );
+      const dati = JSON.parse(stdout.trim()) as { claudeAiOauth?: { accessToken?: string } };
+      if (dati.claudeAiOauth?.accessToken) return true;
+    } catch {
+      // item assente o non leggibile: si prova il prossimo
+    }
+  }
+  return false;
+}
+
+const MESSAGGIO_SETUP = [
+  "L'agente Claude non ha credenziali su questa macchina. Serve un passo una-tantum:",
+  "1) col tuo abbonamento Claude: esegui `claude setup-token` nel Terminale e incolla il token in .env.local (nella cartella di space) come CLAUDE_CODE_OAUTH_TOKEN=... (se la CLI manca: npm i -g @anthropic-ai/claude-code, poi claude /login);",
+  "2) in alternativa: metti ANTHROPIC_API_KEY=sk-ant-... in .env.local.",
+  "Poi riavvia space. In alternativa configura un modello locale (Ollama/Hermes) in space.config.json: non richiede credenziali.",
+].join("\n");
+
+/* ------------------------------------------------------------------ */
 /* Diff a righe (LCS semplice, file di note: dimensioni piccole)       */
 /* ------------------------------------------------------------------ */
 
@@ -112,7 +127,6 @@ export function diffRighe(vecchio: string, nuovo: string, max = 400): RigaDiff[]
   const b = nuovo.split("\n").slice(0, 1500);
   const n = a.length;
   const m = b.length;
-  // LCS con DP compatta
   const dp: number[] = new Array((n + 1) * (m + 1)).fill(0);
   const idx = (i: number, j: number) => i * (m + 1) + j;
   for (let i = n - 1; i >= 0; i--) {
@@ -147,8 +161,7 @@ export function diffRighe(vecchio: string, nuovo: string, max = 400): RigaDiff[]
   for (let k = 0; k < righe.length; k++) {
     const r = righe[k];
     if (r.k === " ") {
-      const vicina =
-        righe.slice(Math.max(0, k - 2), k + 3).some((x) => x.k !== " ");
+      const vicina = righe.slice(Math.max(0, k - 2), k + 3).some((x) => x.k !== " ");
       if (!vicina) {
         if (compresse[compresse.length - 1]?.testo !== "…") {
           compresse.push({ k: " ", testo: "…" });
@@ -162,17 +175,8 @@ export function diffRighe(vecchio: string, nuovo: string, max = 400): RigaDiff[]
 }
 
 /* ------------------------------------------------------------------ */
-/* Regole ask-first del vault                                          */
+/* Regole ask-first (da space.config.json, con default sensati)        */
 /* ------------------------------------------------------------------ */
-
-const FILE_PROTETTI = new Set([
-  "CLAUDE.md",
-  "_CLAUDE.md",
-  "AGENTS.md",
-  "CODEX.md",
-  "GEMINI.md",
-  "ANTIGRAVITY.md",
-]);
 
 function classificaScrittura(rel: string, contenutoNuovo: string | undefined): {
   decisione: "allow" | "ask" | "deny";
@@ -182,16 +186,17 @@ function classificaScrittura(rel: string, contenutoNuovo: string | undefined): {
   if (rel.startsWith("..")) {
     return { decisione: "deny", motivo: "Percorso fuori dal vault" };
   }
-  if (top === ".obsidian" || top === ".git") {
+  if (top.startsWith(".")) {
     return { decisione: "deny", motivo: "Configurazione del vault: fuori dal perimetro dell'agente" };
   }
-  if (top === "Attachments") {
+  if (/^(attachments?|allegati|assets)$/i.test(top)) {
     return { decisione: "ask", motivo: "Gli allegati non si toccano senza conferma esplicita" };
   }
-  if (FILE_PROTETTI.has(rel)) {
+  if (fileProtetti().has(rel)) {
     return { decisione: "ask", motivo: "Manuale operativo degli agenti: serve conferma" };
   }
-  if (top === "99_ARCHIVIO") {
+  const area = getAree().find((a) => a.cartella === top);
+  if (area?.polvere && /archiv/i.test(area.key)) {
     return { decisione: "ask", motivo: "Archiviare o modificare l'archivio richiede conferma" };
   }
   if (contenutoNuovo != null && contenutoNuovo.trim() === "") {
@@ -200,9 +205,101 @@ function classificaScrittura(rel: string, contenutoNuovo: string | undefined): {
   return { decisione: "allow", motivo: "" };
 }
 
+/**
+ * Gate condiviso per le scritture (usato da entrambi i provider):
+ * valuta la regola, mostra il diff e attende la conferma quando serve.
+ * Ritorna null se la scrittura puo procedere, altrimenti il motivo del rifiuto.
+ */
+export async function gateScrittura(opts: {
+  toolName: "Write" | "Edit";
+  input: Record<string, unknown>;
+  emit: Emit;
+  abort: AbortSignal;
+}): Promise<{ rifiuto: string | null; rel: string; esisteva: boolean; nuovo: string }> {
+  const s = stato();
+  const root = vaultPath();
+  const filePath = String(opts.input.file_path ?? "");
+  const assoluto = path.resolve(root, filePath);
+  if (!assoluto.startsWith(root)) {
+    return { rifiuto: "Percorso fuori dal vault: operazione vietata", rel: filePath, esisteva: false, nuovo: "" };
+  }
+  const rel = path.relative(root, assoluto).split(path.sep).join("/");
+
+  let vecchio = "";
+  try {
+    vecchio = await fs.readFile(assoluto, "utf8");
+  } catch {
+    vecchio = "";
+  }
+  let nuovo = vecchio;
+  if (opts.toolName === "Write") {
+    nuovo = String(opts.input.content ?? "");
+  } else {
+    const oldStr = String(opts.input.old_string ?? "");
+    const newStr = String(opts.input.new_string ?? "");
+    if (oldStr && !vecchio.includes(oldStr)) {
+      return { rifiuto: `Testo da sostituire non trovato in ${rel}`, rel, esisteva: true, nuovo: vecchio };
+    }
+    nuovo = opts.input.replace_all
+      ? vecchio.split(oldStr).join(newStr)
+      : vecchio.replace(oldStr, newStr);
+  }
+
+  const esisteva = vecchio !== "" || opts.toolName === "Edit";
+  const regola = classificaScrittura(rel, opts.toolName === "Write" ? nuovo : undefined);
+
+  if (regola.decisione === "deny") {
+    return { rifiuto: regola.motivo, rel, esisteva, nuovo };
+  }
+
+  if (regola.decisione === "ask") {
+    const id = "perm_" + Math.random().toString(36).slice(2, 10);
+    opts.emit({
+      t: "permesso",
+      id,
+      titolo: esisteva ? `Modifica ${rel}` : `Crea ${rel}`,
+      percorso: rel,
+      motivo: regola.motivo,
+      diff: diffRighe(vecchio, nuovo),
+    });
+    const scelta = await new Promise<{ esito: "allow" | "deny"; messaggio?: string }>(
+      (resolve) => {
+        s.permessi.set(id, { resolve });
+        opts.abort.addEventListener("abort", () => {
+          if (s.permessi.delete(id)) {
+            resolve({ esito: "deny", messaggio: "Comando interrotto" });
+          }
+        });
+      }
+    );
+    opts.emit({ t: "permesso_esito", id, esito: scelta.esito });
+    if (scelta.esito === "deny") {
+      return {
+        rifiuto: scelta.messaggio || "L'utente ha negato l'operazione",
+        rel,
+        esisteva,
+        nuovo,
+      };
+    }
+  }
+
+  opts.emit({ t: "scrittura", percorso: rel, azione: esisteva ? "modifica" : "crea" });
+  return { rifiuto: null, rel, esisteva, nuovo };
+}
+
 /* ------------------------------------------------------------------ */
-/* Esecuzione comando                                                  */
+/* Esecuzione comando (dispatcher per provider)                        */
 /* ------------------------------------------------------------------ */
+
+function risolviModello(id?: string): ModelloAgente {
+  const modelli = modelliAgente();
+  const daEnv = process.env.SPACE_AGENT_MODEL;
+  return (
+    modelli.find((m) => m.id === id) ??
+    modelli.find((m) => m.id === daEnv) ??
+    modelli[0]
+  );
+}
 
 export function eseguiComando(opts: {
   comando: string;
@@ -211,11 +308,11 @@ export function eseguiComando(opts: {
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const s = stato();
-  const modello = opts.modello || process.env.SPACE_AGENT_MODEL || "claude-opus-4-8";
+  const modello = risolviModello(opts.modello);
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      const emit = (e: EventoAgente) => {
+      const emit: Emit = (e) => {
         try {
           controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
         } catch {
@@ -228,168 +325,34 @@ export function eseguiComando(opts: {
         controller.close();
         return;
       }
-      if (!(await credenzialiDisponibili())) {
-        emit({ t: "errore", messaggio: MESSAGGIO_SETUP });
-        controller.close();
-        return;
-      }
       s.occupato = true;
       const abort = new AbortController();
+      s.abortCorrente = abort;
 
       try {
-        const sistema = await systemPromptAgente();
-        const root = vaultPath();
-
-        // Env pulito per la CLI dell'SDK: se space gira dentro un'altra
-        // sessione Claude (dev), le variabili del suo harness (proxy interno)
-        // impedirebbero il login normale via Keychain/API key.
-        const envPulito: Record<string, string> = {};
-        for (const [k, v] of Object.entries(process.env)) {
-          if (v == null) continue;
-          if (k === "ANTHROPIC_BASE_URL") continue;
-          if (k.startsWith("CLAUDE_CODE_") && k !== "CLAUDE_CODE_OAUTH_TOKEN") continue;
-          envPulito[k] = v;
-        }
-
-        const q = query({
-          prompt: opts.comando,
-          options: {
-            cwd: root,
-            model: modello,
-            systemPrompt: sistema,
-            env: envPulito,
-            settingSources: [],
-            allowedTools: ["Read", "Grep", "Glob"],
-            disallowedTools: ["Bash", "WebSearch", "WebFetch", "Task", "NotebookEdit"],
-            permissionMode: "default",
-            maxTurns: 40,
-            abortController: abort,
-            resume: opts.sessione ?? undefined,
-            canUseTool: async (toolName, input) => {
-              if (toolName !== "Write" && toolName !== "Edit") {
-                // gli altri strumenti consentiti sono di sola lettura
-                return { behavior: "allow", updatedInput: input } as PermissionResult;
-              }
-              const filePath = String(input.file_path ?? "");
-              const assoluto = path.resolve(root, filePath);
-              if (!assoluto.startsWith(root)) {
-                return {
-                  behavior: "deny",
-                  message: "Percorso fuori dal vault Mind: operazione vietata",
-                } as PermissionResult;
-              }
-              const rel = path.relative(root, assoluto).split(path.sep).join("/");
-
-              // contenuto prima/dopo per il diff
-              let vecchio = "";
-              try {
-                vecchio = await fs.readFile(assoluto, "utf8");
-              } catch {
-                vecchio = "";
-              }
-              let nuovo = vecchio;
-              if (toolName === "Write") {
-                nuovo = String(input.content ?? "");
-              } else {
-                const oldStr = String(input.old_string ?? "");
-                const newStr = String(input.new_string ?? "");
-                nuovo = input.replace_all
-                  ? vecchio.split(oldStr).join(newStr)
-                  : vecchio.replace(oldStr, newStr);
-              }
-
-              const esisteva = vecchio !== "" || toolName === "Edit";
-              const regola = classificaScrittura(rel, toolName === "Write" ? nuovo : undefined);
-
-              if (regola.decisione === "deny") {
-                return { behavior: "deny", message: regola.motivo } as PermissionResult;
-              }
-
-              if (regola.decisione === "ask") {
-                const id = "perm_" + Math.random().toString(36).slice(2, 10);
-                emit({
-                  t: "permesso",
-                  id,
-                  titolo: esisteva ? `Modifica ${rel}` : `Crea ${rel}`,
-                  percorso: rel,
-                  motivo: regola.motivo,
-                  diff: diffRighe(vecchio, nuovo),
-                });
-                const scelta = await new Promise<{ esito: "allow" | "deny"; messaggio?: string }>(
-                  (resolve) => {
-                    s.permessi.set(id, { resolve });
-                    abort.signal.addEventListener("abort", () => {
-                      if (s.permessi.delete(id)) {
-                        resolve({ esito: "deny", messaggio: "Comando interrotto" });
-                      }
-                    });
-                  }
-                );
-                emit({ t: "permesso_esito", id, esito: scelta.esito });
-                if (scelta.esito === "deny") {
-                  return {
-                    behavior: "deny",
-                    message: scelta.messaggio || "L'utente ha negato l'operazione",
-                  } as PermissionResult;
-                }
-              }
-
-              emit({
-                t: "scrittura",
-                percorso: rel,
-                azione: esisteva ? "modifica" : "crea",
-              });
-              return { behavior: "allow", updatedInput: input } as PermissionResult;
-            },
-          },
-        });
-
-        for await (const m of q as AsyncIterable<SDKMessage>) {
-          if (m.type === "system" && "subtype" in m && m.subtype === "init") {
-            const sess = (m as { session_id?: string }).session_id ?? "";
-            s.ultimaSessione = sess || s.ultimaSessione;
-            emit({ t: "init", sessione: sess, modello });
-          } else if (m.type === "assistant") {
-            const contenuto = (m as { message?: { content?: unknown } }).message?.content;
-            if (Array.isArray(contenuto)) {
-              for (const blocco of contenuto) {
-                if (blocco?.type === "text" && blocco.text) {
-                  emit({ t: "testo", testo: String(blocco.text) });
-                } else if (blocco?.type === "tool_use") {
-                  const inp = (blocco.input ?? {}) as Record<string, unknown>;
-                  const descr = String(
-                    inp.file_path ?? inp.pattern ?? inp.path ?? inp.query ?? ""
-                  );
-                  emit({ t: "tool", nome: String(blocco.name ?? "tool"), descr });
-                }
-              }
-            }
-          } else if (m.type === "result") {
-            const r = m as {
-              subtype: string;
-              duration_ms?: number;
-              total_cost_usd?: number;
-              result?: string;
-            };
-            emit({
-              t: "fine",
-              ok: r.subtype === "success",
-              durataMs: r.duration_ms,
-              costoUsd: r.total_cost_usd,
-              risultato: typeof r.result === "string" ? r.result : undefined,
-            });
+        if (modello.provider === "openai") {
+          await eseguiOpenAI({ comando: opts.comando, modello, emit, abort });
+        } else {
+          if (!(await credenzialiClaude())) {
+            emit({ t: "errore", messaggio: MESSAGGIO_SETUP });
+            return;
           }
+          await eseguiClaude({
+            comando: opts.comando,
+            sessione: opts.sessione,
+            modelloId: modello.id,
+            emit,
+            abort,
+          });
         }
       } catch (err) {
         emit({
           t: "errore",
-          messaggio:
-            err instanceof Error
-              ? err.message
-              : "Errore dell'agente (Claude Code e autenticato su questo Mac?)",
+          messaggio: err instanceof Error ? err.message : "Errore dell'agente",
         });
       } finally {
         s.occupato = false;
+        s.abortCorrente = null;
         try {
           controller.close();
         } catch {
@@ -398,8 +361,106 @@ export function eseguiComando(opts: {
       }
     },
     cancel() {
-      // il client ha chiuso: liberiamo il lock al prossimo giro del loop
-      stato().occupato = false;
+      // il client ha chiuso lo stream: fermiamo davvero il run in corso
+      const st = stato();
+      st.abortCorrente?.abort();
+      st.abortCorrente = null;
+      st.occupato = false;
     },
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Runner Claude (Agent SDK)                                           */
+/* ------------------------------------------------------------------ */
+
+async function eseguiClaude(opts: {
+  comando: string;
+  sessione?: string | null;
+  modelloId: string;
+  emit: Emit;
+  abort: AbortController;
+}): Promise<void> {
+  const s = stato();
+  const sistema = await systemPromptAgente();
+  const root = vaultPath();
+  const { emit } = opts;
+
+  // Env pulito per la CLI dell'SDK: se space gira dentro un'altra sessione
+  // Claude (dev), le variabili del suo harness impedirebbero il login normale.
+  const envPulito: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v == null) continue;
+    if (k === "ANTHROPIC_BASE_URL") continue;
+    if (k.startsWith("CLAUDE_CODE_") && k !== "CLAUDE_CODE_OAUTH_TOKEN") continue;
+    envPulito[k] = v;
+  }
+
+  const q = query({
+    prompt: opts.comando,
+    options: {
+      cwd: root,
+      model: opts.modelloId,
+      systemPrompt: sistema,
+      env: envPulito,
+      settingSources: [],
+      allowedTools: ["Read", "Grep", "Glob"],
+      disallowedTools: ["Bash", "WebSearch", "WebFetch", "Task", "NotebookEdit"],
+      permissionMode: "default",
+      maxTurns: 40,
+      abortController: opts.abort,
+      resume: opts.sessione ?? undefined,
+      canUseTool: async (toolName, input) => {
+        if (toolName !== "Write" && toolName !== "Edit") {
+          // gli altri strumenti consentiti sono di sola lettura
+          return { behavior: "allow", updatedInput: input } as PermissionResult;
+        }
+        const esito = await gateScrittura({
+          toolName,
+          input,
+          emit,
+          abort: opts.abort.signal,
+        });
+        if (esito.rifiuto) {
+          return { behavior: "deny", message: esito.rifiuto } as PermissionResult;
+        }
+        return { behavior: "allow", updatedInput: input } as PermissionResult;
+      },
+    },
+  });
+
+  for await (const m of q as AsyncIterable<SDKMessage>) {
+    if (m.type === "system" && "subtype" in m && m.subtype === "init") {
+      const sess = (m as { session_id?: string }).session_id ?? "";
+      s.ultimaSessione = sess || s.ultimaSessione;
+      emit({ t: "init", sessione: sess, modello: opts.modelloId });
+    } else if (m.type === "assistant") {
+      const contenuto = (m as { message?: { content?: unknown } }).message?.content;
+      if (Array.isArray(contenuto)) {
+        for (const blocco of contenuto) {
+          if (blocco?.type === "text" && blocco.text) {
+            emit({ t: "testo", testo: String(blocco.text) });
+          } else if (blocco?.type === "tool_use") {
+            const inp = (blocco.input ?? {}) as Record<string, unknown>;
+            const descr = String(inp.file_path ?? inp.pattern ?? inp.path ?? inp.query ?? "");
+            emit({ t: "tool", nome: String(blocco.name ?? "tool"), descr });
+          }
+        }
+      }
+    } else if (m.type === "result") {
+      const r = m as {
+        subtype: string;
+        duration_ms?: number;
+        total_cost_usd?: number;
+        result?: string;
+      };
+      emit({
+        t: "fine",
+        ok: r.subtype === "success",
+        durataMs: r.duration_ms,
+        costoUsd: r.total_cost_usd,
+        risultato: typeof r.result === "string" ? r.result : undefined,
+      });
+    }
+  }
 }

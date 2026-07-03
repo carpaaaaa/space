@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# configurazione personale di space (il template resta pulito)
+space.config.json

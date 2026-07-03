@@ -4,12 +4,13 @@ import { Pannello, useUI } from "@/state/store";
 
 const VOCI: { key: Pannello; label: string }[] = [
   { key: "galassia", label: "Galassia" },
-  { key: "oggi", label: "Oggi" },
+  { key: "oggi", label: "Obiettivi" },
   { key: "progetti", label: "Progetti" },
   { key: "finanze", label: "Finanze" },
   { key: "inbox", label: "Inbox" },
   { key: "log", label: "Log" },
   { key: "ricerca", label: "Ricerca" },
+  { key: "aspetto", label: "Aspetto" },
 ];
 
 export function NavRail() {

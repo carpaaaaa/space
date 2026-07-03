@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Galassia, caricaGalassia } from "@/lib/galassia";
+import { Galassia, caricaGalassia, ricoloraGalassia } from "@/lib/galassia";
+import { temaPerId } from "@/lib/temi";
 import { useUI } from "@/state/store";
 import { ControlliCamera } from "./camera";
 import { Filamenti } from "./filamenti";
@@ -35,6 +36,20 @@ export default function GalaxyCanvas() {
   // caricamento (e ricaricamento quando il vault cambia su disco)
   const setGalassia = useUI((s) => s.setGalassia);
   const inGalassia = useUI((s) => s.pannello === "galassia");
+  const aspetto = useUI((s) => s.aspetto);
+  const aspettoVersione = useUI((s) => s.aspettoVersione);
+  const tema = temaPerId(aspetto.tema);
+
+  // tema/modalita colore -> ricolora i buffer della galassia
+  useEffect(() => {
+    if (!g) return;
+    ricoloraGalassia(g, {
+      stella: tema.galassia.stella,
+      oro: tema.galassia.oro,
+      polvere: tema.galassia.polvere,
+      mode: aspetto.coloreMode,
+    });
+  }, [g, tema, aspetto.coloreMode]);
   useEffect(() => {
     let vivo = true;
     caricaGalassia()
@@ -64,8 +79,8 @@ export default function GalaxyCanvas() {
         >
           <ControlliCamera g={g} ridotto={ridotto} />
           <SfondoAmbientale />
-          <PolvereBracci />
-          <Nucleo ridotto={ridotto} />
+          <PolvereBracci tinte={tema.galassia} />
+          <Nucleo ridotto={ridotto} tinte={tema.galassia} />
           {/* stelle principali: note, concetti, documenti */}
           <StratoStelle
             g={g}
@@ -73,6 +88,10 @@ export default function GalaxyCanvas() {
             alpha={1}
             scala={2.2}
             filtriVersione={filtriVersione}
+            aspettoVersione={aspettoVersione}
+            scalaExtra={aspetto.scalaStelle}
+            glowExtra={aspetto.glow}
+            durezza={aspetto.durezza}
           />
           {/* micro-stelle sezione: emergono avvicinandosi (desktop) */}
           {!mobile && (
@@ -83,6 +102,10 @@ export default function GalaxyCanvas() {
               scala={1.9}
               lod={[36, 120]}
               filtriVersione={filtriVersione}
+              aspettoVersione={aspettoVersione}
+              scalaExtra={aspetto.scalaStelle}
+              glowExtra={aspetto.glow}
+              durezza={aspetto.durezza}
             />
           )}
           {/* alone dei gap in periferia */}
@@ -92,6 +115,10 @@ export default function GalaxyCanvas() {
             alpha={0.55}
             scala={1.7}
             filtriVersione={filtriVersione}
+            aspettoVersione={aspettoVersione}
+            scalaExtra={aspetto.scalaStelle}
+            glowExtra={aspetto.glow}
+            durezza={aspetto.durezza}
           />
           {/* corsie di polvere: blending normale, occludono */}
           <StratoStelle
@@ -101,6 +128,9 @@ export default function GalaxyCanvas() {
             scala={3.6}
             additive={false}
             filtriVersione={filtriVersione}
+            aspettoVersione={aspettoVersione}
+            scalaExtra={aspetto.scalaStelle}
+            durezza={aspetto.durezza}
           />
           <Filamenti g={g} />
           <Picker g={g} />

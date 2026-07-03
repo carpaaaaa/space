@@ -54,10 +54,6 @@ function mix(
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
-const BIANCO_STELLA = hexToRgb("#dfe9ff");
-const ORO = hexToRgb("#ffd98a");
-const SEPPIA = hexToRgb("#8a6a44");
-const SEPPIA_SCURA = hexToRgb("#6b4f34");
 const GRIGIO_GAP = hexToRgb("#9aa3b5");
 
 export async function caricaGalassia(): Promise<Galassia> {
@@ -75,37 +71,16 @@ export async function caricaGalassia(): Promise<Galassia> {
   const flag = new Uint8Array(s.flag);
   const areaIdx = new Uint8Array(s.area);
 
-  const coloriAree = payload.aree.map((a) => hexToRgb(a.colore));
-  const R_MAX = 95;
-
   const idxPrincipali: number[] = [];
   const idxSezioni: number[] = [];
   const idxGap: number[] = [];
   const idxPolvere: number[] = [];
 
   for (let i = 0; i < n; i++) {
-    const base = coloriAree[areaIdx[i]] ?? BIANCO_STELLA;
-    const r = Math.hypot(pos[i * 3], pos[i * 3 + 2]) / R_MAX;
-    let c: [number, number, number];
-    if (flag[i] & F_POLVERE) {
-      c = mix(SEPPIA, SEPPIA_SCURA, Math.min(1, r));
-      idxPolvere.push(i);
-    } else if (kind[i] === K_GAP) {
-      c = GRIGIO_GAP;
-      idxGap.push(i);
-    } else if (kind[i] === K_SEZIONE) {
-      c = mix(base, BIANCO_STELLA, 0.45 + 0.3 * Math.min(1, r));
-      idxSezioni.push(i);
-    } else {
-      // note, concetti, documenti: colore area, piu blu in periferia, oro se god
-      c = mix(base, BIANCO_STELLA, 0.18 + 0.35 * Math.min(1, r));
-      if (flag[i] & F_GOD) c = mix(c, ORO, 0.55);
-      if (kind[i] === K_CONCETTO) c = mix(c, BIANCO_STELLA, 0.2);
-      idxPrincipali.push(i);
-    }
-    color[i * 3] = c[0];
-    color[i * 3 + 1] = c[1];
-    color[i * 3 + 2] = c[2];
+    if (flag[i] & F_POLVERE) idxPolvere.push(i);
+    else if (kind[i] === K_GAP) idxGap.push(i);
+    else if (kind[i] === K_SEZIONE) idxSezioni.push(i);
+    else idxPrincipali.push(i);
   }
 
   const relToIdx = new Map<string, number>();
@@ -153,9 +128,9 @@ export async function caricaGalassia(): Promise<Galassia> {
   const noteOrdinate = idxPrincipali
     .filter((i) => {
       if (kind[i] !== K_NOTA || usati.has(i)) return false;
-      // niente etichette fisse per sistema e logs: affollano il bulge
-      const key = payload.aree[areaIdx[i]]?.key;
-      return key !== "sistema" && key !== "logs" && key !== "archivio";
+      // niente etichette fisse per sistema e corsie di polvere: affollano
+      const area = payload.aree[areaIdx[i]];
+      return area != null && area.key !== "sistema" && !area.polvere;
     })
     .sort((a, b) => size[b] - size[a])
     .slice(0, 8);
@@ -168,7 +143,7 @@ export async function caricaGalassia(): Promise<Galassia> {
     });
   }
 
-  return {
+  const g: Galassia = {
     payload,
     n,
     pos,
@@ -186,6 +161,8 @@ export async function caricaGalassia(): Promise<Galassia> {
     ancoreAree,
     etichetteFisse,
   };
+  ricoloraGalassia(g, OPZIONI_COLORE_DEFAULT);
+  return g;
 }
 
 /** Applica i filtri al vettore vis (1 visibile, 0 nascosta). */
@@ -198,5 +175,72 @@ export function applicaFiltri(g: Galassia, filtri: Filtri): void {
     if (v && filtri.soloGap && !(g.flag[i] & F_GAP)) v = 0;
     if (v && !filtri.sezioni && g.kind[i] === K_SEZIONE) v = 0;
     g.vis[i] = v;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Ricolorazione (tema + modalita colore, dal pannello Aspetto)        */
+/* ------------------------------------------------------------------ */
+
+export interface OpzioniColore {
+  /** bianco-stella del tema */
+  stella: string;
+  /** tinta god node / accento del tema */
+  oro: string;
+  /** corsie di polvere: [chiara, scura] */
+  polvere: [string, string];
+  mode: "area" | "mono" | "community";
+}
+
+export const OPZIONI_COLORE_DEFAULT: OpzioniColore = {
+  stella: "#dfe9ff",
+  oro: "#ffd98a",
+  polvere: ["#8a6a44", "#6b4f34"],
+  mode: "area",
+};
+
+function hslToRgb(h: number, sat: number, lum: number): [number, number, number] {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = sat * Math.min(lum, 1 - lum);
+  const f = (n: number) => lum - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [f(0), f(8), f(4)];
+}
+
+/** Ricalcola i colori delle stelle in-place (poi i layer risincronizzano). */
+export function ricoloraGalassia(g: Galassia, opz: OpzioniColore): void {
+  const { payload, n, pos, kind, flag, areaIdx, color } = g;
+  const coloriAree = payload.aree.map((a) => hexToRgb(a.colore));
+  const STELLA = hexToRgb(opz.stella);
+  const ORO_T = hexToRgb(opz.oro);
+  const POLV_A = hexToRgb(opz.polvere[0]);
+  const POLV_B = hexToRgb(opz.polvere[1]);
+  const R_MAX = 95;
+
+  const basePer = (i: number): [number, number, number] => {
+    if (opz.mode === "mono") return ORO_T;
+    if (opz.mode === "community") {
+      const c = payload.stars.community[i];
+      if (c >= 0) return hslToRgb((c * 137.5) % 360, 0.42, 0.68);
+    }
+    return coloriAree[areaIdx[i]] ?? STELLA;
+  };
+
+  for (let i = 0; i < n; i++) {
+    const r = Math.hypot(pos[i * 3], pos[i * 3 + 2]) / R_MAX;
+    let c: [number, number, number];
+    if (flag[i] & F_POLVERE) {
+      c = mix(POLV_A, POLV_B, Math.min(1, r));
+    } else if (kind[i] === K_GAP) {
+      c = GRIGIO_GAP;
+    } else if (kind[i] === K_SEZIONE) {
+      c = mix(basePer(i), STELLA, 0.45 + 0.3 * Math.min(1, r));
+    } else {
+      c = mix(basePer(i), STELLA, 0.18 + 0.35 * Math.min(1, r));
+      if (flag[i] & F_GOD) c = mix(c, ORO_T, 0.55);
+      if (kind[i] === K_CONCETTO) c = mix(c, STELLA, 0.2);
+    }
+    color[i * 3] = c[0];
+    color[i * 3 + 1] = c[1];
+    color[i * 3 + 2] = c[2];
   }
 }

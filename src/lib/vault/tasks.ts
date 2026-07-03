@@ -1,4 +1,4 @@
-import { AreaKey } from "./config";
+import { AreaKey, areaPerKey } from "./config";
 import { NotaMeta, getSnapshot, senzaCodeFence } from "./notes";
 import { memoPerVersione } from "./watcher";
 
@@ -90,13 +90,13 @@ function isoTraGiorni(giorni: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-async function costruisci(): Promise<TaskBuckets> {
+/** Parsing puro delle task (memoizzato sulla versione del vault). */
+async function parseTutte(): Promise<TaskItem[]> {
   const snap = await getSnapshot();
   const tutte: TaskItem[] = [];
-
   for (const nota of snap.notes) {
-    // il log è un registro, non una lista operativa
-    if (nota.areaKey === "logs") continue;
+    // i registri (log) non sono liste operative
+    if (areaPerKey(nota.areaKey).polvere && /log/i.test(nota.areaKey)) continue;
     const body = snap.bodies.get(nota.rel);
     if (!body) continue;
     for (const riga of senzaCodeFence(body).split("\n")) {
@@ -104,6 +104,17 @@ async function costruisci(): Promise<TaskBuckets> {
       if (t && t.testo) tutte.push(t);
     }
   }
+  return tutte;
+}
+
+const getTutteMemo = memoPerVersione(parseTutte);
+
+/**
+ * Bucket calcolati a ogni richiesta con la data DI OGGI: se il vault non
+ * cambia per giorni, "scadute/oggi/prossimi 7" restano comunque corretti.
+ */
+async function costruisci(): Promise<TaskBuckets> {
+  const tutte = await getTutteMemo();
 
   const oggi = isoOggi();
   const limite7 = isoTraGiorni(7);
@@ -132,4 +143,4 @@ async function costruisci(): Promise<TaskBuckets> {
   return buckets;
 }
 
-export const getTasks = memoPerVersione(costruisci);
+export const getTasks = costruisci;

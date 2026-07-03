@@ -4,7 +4,17 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Galassia } from "@/lib/galassia";
+import type { TemaGalassia } from "@/lib/temi";
 import { materialeStelle, geometriaSubset } from "./materiali";
+
+function rgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16) / 255,
+    parseInt(h.slice(2, 4), 16) / 255,
+    parseInt(h.slice(4, 6), 16) / 255,
+  ];
+}
 
 /** Aggancia un materiale a un ref per mutarne le uniform dentro useFrame. */
 function useMaterialeRef(mat: THREE.ShaderMaterial) {
@@ -24,6 +34,10 @@ export function StratoStelle({
   additive = true,
   lod,
   filtriVersione,
+  aspettoVersione = 0,
+  scalaExtra = 1,
+  glowExtra = 1,
+  durezza = 2.4,
 }: {
   g: Galassia;
   indici: number[];
@@ -33,8 +47,13 @@ export function StratoStelle({
   /** [distMin che accende, distMax che spegne]: dissolve col fattore zoom */
   lod?: [number, number];
   filtriVersione: number;
+  /** bump quando cambiano tema/colori: risincronizza i buffer colore */
+  aspettoVersione?: number;
+  scalaExtra?: number;
+  glowExtra?: number;
+  durezza?: number;
 }) {
-  const { geom, aggiorna } = useMemo(
+  const { geom, aggiorna, aggiornaColore } = useMemo(
     () => geometriaSubset(indici, g.pos, g.size, g.color, g.vis),
     // la geometria dipende solo dal dataset
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,6 +69,10 @@ export function StratoStelle({
   }, [filtriVersione, aggiorna, g]);
 
   useEffect(() => {
+    if (aspettoVersione > 0) aggiornaColore(g.color);
+  }, [aspettoVersione, aggiornaColore, g]);
+
+  useEffect(() => {
     return () => {
       geom.dispose();
       mat.dispose();
@@ -59,17 +82,24 @@ export function StratoStelle({
   const matRef = useMaterialeRef(mat);
   useFrame(({ camera }) => {
     const m = matRef.current;
-    if (!m || !lod) return;
-    const dist = camera.position.length();
-    const t = THREE.MathUtils.clamp((lod[1] - dist) / (lod[1] - lod[0]), 0, 1);
-    m.uniforms.uAlpha.value = alpha * t;
+    if (!m) return;
+    // le impostazioni Aspetto si applicano qui (fuori dal render React)
+    m.uniforms.uScala.value = scala * scalaExtra;
+    m.uniforms.uDurezza.value = durezza;
+    if (lod) {
+      const dist = camera.position.length();
+      const t = THREE.MathUtils.clamp((lod[1] - dist) / (lod[1] - lod[0]), 0, 1);
+      m.uniforms.uAlpha.value = alpha * glowExtra * t;
+    } else {
+      m.uniforms.uAlpha.value = alpha * glowExtra;
+    }
   });
 
   return <points geometry={geom} material={mat} frustumCulled={false} />;
 }
 
-/** Il nucleo dorato: strati di glow che respirano lentamente (mai a scatti). */
-export function Nucleo({ ridotto }: { ridotto: boolean }) {
+/** Il nucleo: strati di glow che respirano lentamente (mai a scatti). */
+export function Nucleo({ ridotto, tinte }: { ridotto: boolean; tinte: TemaGalassia }) {
   const mat = useMemo(() => {
     const m = materialeStelle({ alpha: 1, scala: 2.4 });
     return m;
@@ -78,23 +108,15 @@ export function Nucleo({ ridotto }: { ridotto: boolean }) {
     const gg = new THREE.BufferGeometry();
     const pos = new Float32Array([0, 0, 0, 0, 0.4, 0, 0, -0.3, 0, 0.8, 0.1, 0.5]);
     const size = new Float32Array([34, 15, 52, 8]);
-    const color = new Float32Array([
-      // f6e7c1
-      0.965, 0.906, 0.757,
-      // ffd98a
-      1.0, 0.851, 0.541,
-      // ffbf69 alone largo
-      1.0, 0.749, 0.412,
-      // scintilla
-      1.0, 0.93, 0.8,
-    ]);
+    const [c0, c1, c2, c3] = tinte.nucleo.map(rgb);
+    const color = new Float32Array([...c0, ...c1, ...c2, ...c3]);
     const vis = new Float32Array([1, 1, 0.5, 0.8]);
     gg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     gg.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
     gg.setAttribute("aColor", new THREE.BufferAttribute(color, 3));
     gg.setAttribute("aVis", new THREE.BufferAttribute(vis, 1));
     return gg;
-  }, []);
+  }, [tinte]);
 
   useEffect(
     () => () => {
@@ -135,8 +157,10 @@ function rngSemplice(seed: number): () => number {
  * gli stessi parametri di spirale del layout server (R_CORE 9, R_MAX 95,
  * TWIST 3.05, 10 bracci) per dare la resa flocculenta di NGC 4414.
  */
-export function PolvereBracci() {
+export function PolvereBracci({ tinte }: { tinte: TemaGalassia }) {
   const { geomPolvere, matPolvere, geomFoschia, matFoschia } = useMemo(() => {
+    const [pr, pg, pb] = rgb(tinte.polvere[0]);
+    const [fr, fg, fb] = rgb(tinte.nucleo[1]);
     const rnd = rngSemplice(441441);
     const R_CORE = 9;
     const R_MAX = 95;
@@ -160,9 +184,9 @@ export function PolvereBracci() {
       pp[i * 3 + 2] = Math.sin(angolo) * raggio;
       sp[i] = 1.6 + rnd() * 2.8;
       const scuro = 0.45 + rnd() * 0.4;
-      cp[i * 3] = 0.5 * scuro;
-      cp[i * 3 + 1] = 0.38 * scuro;
-      cp[i * 3 + 2] = 0.24 * scuro;
+      cp[i * 3] = pr * 0.92 * scuro;
+      cp[i * 3 + 1] = pg * 0.92 * scuro;
+      cp[i * 3 + 2] = pb * 0.92 * scuro;
     }
     const gp = new THREE.BufferGeometry();
     gp.setAttribute("position", new THREE.BufferAttribute(pp, 3));
@@ -183,9 +207,9 @@ export function PolvereBracci() {
       pf[i * 3 + 1] = (rnd() - 0.5) * 2.6;
       pf[i * 3 + 2] = Math.sin(angolo) * raggio;
       sf[i] = 6 + rnd() * 9;
-      cf[i * 3] = 1.0;
-      cf[i * 3 + 1] = 0.87;
-      cf[i * 3 + 2] = 0.56;
+      cf[i * 3] = fr;
+      cf[i * 3 + 1] = fg;
+      cf[i * 3 + 2] = fb;
     }
     const gf = new THREE.BufferGeometry();
     gf.setAttribute("position", new THREE.BufferAttribute(pf, 3));
@@ -199,7 +223,7 @@ export function PolvereBracci() {
       geomFoschia: gf,
       matFoschia: materialeStelle({ alpha: 0.085, scala: 3.2 }),
     };
-  }, []);
+  }, [tinte]);
 
   useEffect(
     () => () => {

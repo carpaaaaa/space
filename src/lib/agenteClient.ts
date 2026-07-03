@@ -18,7 +18,11 @@ export async function inviaComando(testo: string, continua = true): Promise<void
     const res = await fetch("/api/agent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comando: testo, continua }),
+      body: JSON.stringify({
+        comando: testo,
+        continua,
+        modello: ui.modelloScelto ?? undefined,
+      }),
     });
 
     if (!res.ok || !res.body) {

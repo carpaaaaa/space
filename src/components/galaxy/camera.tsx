@@ -23,6 +23,7 @@ export function ControlliCamera({
   const { camera } = useThree();
   const volaA = useUI((s) => s.volaA);
   const setGalassiaPronta = useUI((s) => s.setGalassiaPronta);
+  const autoRotazione = useUI((s) => s.aspetto.autoRotazione);
   const entrata = useRef(false);
 
   // ingresso cinematico: discesa verso il disco, una sola volta
@@ -106,7 +107,7 @@ export function ControlliCamera({
       minDistance={4}
       maxDistance={420}
       maxPolarAngle={1.5}
-      autoRotate={!ridotto}
+      autoRotate={!ridotto && autoRotazione}
       autoRotateSpeed={0.12}
       makeDefault
     />

@@ -1,8 +1,21 @@
 import { NextRequest } from "next/server";
 import { agenteOccupato, eseguiComando, ultimaSessione } from "@/lib/agent/sessione";
+import { modelliAgente } from "@/lib/vault/config";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
+
+/** GET: modelli configurati (da space.config.json) e stato dell'agente. */
+export async function GET() {
+  return Response.json({
+    modelli: modelliAgente().map((m) => ({
+      id: m.id,
+      etichetta: m.etichetta,
+      provider: m.provider,
+    })),
+    occupato: agenteOccupato(),
+  });
+}
 
 /**
  * POST { comando, continua?: boolean, modello?: string }
