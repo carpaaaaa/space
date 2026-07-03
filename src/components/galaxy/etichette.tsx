@@ -12,7 +12,6 @@ export type MappaEtichette = Map<string, HTMLDivElement>;
 // temp module-level: un solo thread rAF, niente allocazioni per frame
 const M_TEMP = new THREE.Matrix4();
 const V_TEMP = new THREE.Vector3();
-const V_STELLA = new THREE.Vector3();
 
 /**
  * Dentro il canvas: proietta le posizioni 3D e muove direttamente i div
@@ -35,7 +34,6 @@ export function PonteEtichette({
     frame.current += 1;
     if (frame.current % 2 !== 0) return; // 30fps bastano per le etichette
     M_TEMP.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    const distCam = camera.position.length();
 
     for (const [chiave, el] of refs.current) {
       const [tipo, resto] = chiave.split("|", 2);
@@ -44,27 +42,22 @@ export function PonteEtichette({
       let z = 0;
       let opacita = 0;
       if (tipo === "area") {
-        const i = Number(resto);
-        const a = g.ancoreAree[i];
+        const a = g.ancoreAree[Number(resto)];
         if (a) {
           [x, y, z] = a.pos;
-          // i nomi area vivono nella vista panoramica
-          opacita = THREE.MathUtils.clamp((distCam - 70) / 60, 0, 1) * 0.9;
+          opacita = 0.9; // i nomi area restano sempre visibili, a qualsiasi zoom
         }
       } else {
         const i = Number(resto);
         x = g.pos[i * 3];
         y = g.pos[i * 3 + 1];
         z = g.pos[i * 3 + 2];
-        if (g.vis[i] > 0) {
-          const dStella = camera.position.distanceTo(V_STELLA.set(x, y, z));
-          const god = (g.flag[i] & F_GOD) !== 0;
-          const vicino = THREE.MathUtils.clamp((190 - dStella) / 80, 0, 1);
-          opacita = god ? Math.max(0.55, vicino) : vicino * 0.9;
-        }
+        // le etichette fisse (god node + note grandi) restano sempre visibili;
+        // spariscono solo se la stella e filtrata via o finisce fuori schermo.
+        if (g.vis[i] > 0) opacita = (g.flag[i] & F_GOD) !== 0 ? 1 : 0.85;
       }
       V_TEMP.set(x, y, z).applyMatrix4(M_TEMP);
-      if (V_TEMP.z < -1 || V_TEMP.z > 1) opacita = 0;
+      if (V_TEMP.z < -1 || V_TEMP.z > 1) opacita = 0; // dietro o fuori dalla camera
       const sx = ((V_TEMP.x + 1) / 2) * size.width;
       const sy = ((1 - V_TEMP.y) / 2) * size.height;
       el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;

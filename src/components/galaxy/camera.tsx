@@ -102,9 +102,10 @@ export function ControlliCamera({
       enableDamping
       dampingFactor={0.06}
       rotateSpeed={0.55}
-      minDistance={12}
-      maxDistance={320}
-      maxPolarAngle={1.42}
+      zoomSpeed={0.9}
+      minDistance={4}
+      maxDistance={420}
+      maxPolarAngle={1.5}
       autoRotate={!ridotto}
       autoRotateSpeed={0.12}
       makeDefault
