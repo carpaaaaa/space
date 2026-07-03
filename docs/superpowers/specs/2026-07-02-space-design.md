@@ -1,8 +1,8 @@
-# NUCLEO - Design e piano di costruzione
+# space - Design e piano di costruzione
 
 Data: 2026-07-02. Stato: approvato dal brief (sessione autonoma).
 
-NUCLEO e il cockpit agentico del vault Obsidian `Mind` (`~/Documents/Mind`): legge il vault live,
+space e il cockpit agentico del vault Obsidian `Mind` (`~/Documents/Mind`): legge il vault live,
 lo visualizza come galassia (reference: NGC 4414) e permette di comandare un agente Claude che
 opera sulle note rispettando `_CLAUDE.md`. Non modifica mai la struttura del vault di sua
 iniziativa. Lingua UI e note prodotte: italiano.

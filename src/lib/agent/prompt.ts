@@ -11,7 +11,7 @@ async function leggi(rel: string): Promise<string> {
 }
 
 /**
- * System prompt dell'agente NUCLEO: il manuale operativo del vault e la legge.
+ * System prompt dell'agente space: il manuale operativo del vault e la legge.
  * Include _CLAUDE.md + Mind - Organizzazione vault + index, come richiesto
  * dalle regole di Mind.
  */
@@ -28,7 +28,7 @@ export async function systemPromptAgente(): Promise<string> {
   const ora = `${p(oggi.getHours())}:${p(oggi.getMinutes())}`;
 
   return [
-    `Sei l'agente di NUCLEO, il cockpit del vault Obsidian Mind di bozzo.`,
+    `Sei l'agente di space, il cockpit del vault Obsidian Mind di bozzo.`,
     `Lavori DENTRO il vault (la tua cwd). Data: ${dataISO}, ora: ${ora}.`,
     ``,
     `REGOLE VINCOLANTI:`,

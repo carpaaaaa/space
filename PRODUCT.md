@@ -1,4 +1,4 @@
-# NUCLEO
+# space
 
 Il cervello del vault Mind. Cockpit locale che legge `~/Documents/Mind` live, lo mostra come
 galassia (reference NGC 4414) e permette di comandare un agente Claude che scrive nel vault

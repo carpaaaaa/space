@@ -4,7 +4,7 @@ import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NUCLEO",
+  title: "space",
   description: "Il cervello del vault Mind",
 };
 

@@ -33,14 +33,14 @@ async function credenzialiDisponibili(): Promise<boolean> {
 }
 
 const MESSAGGIO_SETUP = [
-  "L'agente non ha credenziali su questo Mac. Serve un passo una-tantum, poi NUCLEO funziona da solo:",
-  "1) col tuo abbonamento Claude: apri il Terminale, esegui `claude setup-token` e incolla il token in ~/Documents/NUCLEO/.env.local come CLAUDE_CODE_OAUTH_TOKEN=... (se la CLI manca: npm i -g @anthropic-ai/claude-code, poi claude /login);",
+  "L'agente non ha credenziali su questo Mac. Serve un passo una-tantum, poi space funziona da solo:",
+  "1) col tuo abbonamento Claude: apri il Terminale, esegui `claude setup-token` e incolla il token in ~/Desktop/Cartella/space/.env.local come CLAUDE_CODE_OAUTH_TOKEN=... (se la CLI manca: npm i -g @anthropic-ai/claude-code, poi claude /login);",
   "2) in alternativa: metti ANTHROPIC_API_KEY=sk-ant-... in .env.local.",
   "Poi riavvia `npm run dev`. I pannelli e la galassia funzionano comunque: solo i comandi all'agente richiedono questo passo.",
 ].join("\n");
 
 /**
- * Layer agente di NUCLEO sopra il Claude Agent SDK.
+ * Layer agente di space sopra il Claude Agent SDK.
  * - usa l'autenticazione locale di Claude Code (o ANTHROPIC_API_KEY se presente)
  * - lavora con cwd nel vault, strumenti file-only (niente Bash)
  * - le scritture sensibili passano da una conferma con diff (ask-first)
@@ -211,7 +211,7 @@ export function eseguiComando(opts: {
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const s = stato();
-  const modello = opts.modello || process.env.NUCLEO_AGENT_MODEL || "claude-opus-4-8";
+  const modello = opts.modello || process.env.SPACE_AGENT_MODEL || "claude-opus-4-8";
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -240,7 +240,7 @@ export function eseguiComando(opts: {
         const sistema = await systemPromptAgente();
         const root = vaultPath();
 
-        // Env pulito per la CLI dell'SDK: se NUCLEO gira dentro un'altra
+        // Env pulito per la CLI dell'SDK: se space gira dentro un'altra
         // sessione Claude (dev), le variabili del suo harness (proxy interno)
         // impedirebbero il login normale via Keychain/API key.
         const envPulito: Record<string, string> = {};

@@ -21,11 +21,11 @@ export function NavRail() {
     <nav
       className="absolute left-0 top-0 flex h-full w-[190px] flex-col px-5 py-5 max-md:hidden"
       style={{ zIndex: "var(--z-hud)" }}
-      aria-label="Navigazione NUCLEO"
+      aria-label="Navigazione space"
     >
       <div className="mb-8 select-none">
         <p className="text-[19px] font-semibold tracking-[0.14em]" style={{ color: "var(--oro)" }}>
-          NUCLEO
+          space
         </p>
         <p className="mt-0.5 text-[11.5px] leading-tight" style={{ color: "var(--inchiostro-3)" }}>
           il cervello del vault Mind

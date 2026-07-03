@@ -1,4 +1,4 @@
-# NUCLEO
+# space
 
 Il cervello del vault Mind. Un cockpit web locale che legge il vault Obsidian
 `~/Documents/Mind` live, lo mostra come una galassia (reference: NGC 4414) e permette di
@@ -10,7 +10,7 @@ chiamata solo quando dai un comando esplicito all'agente.
 ## Avvio
 
 ```bash
-cd ~/Documents/NUCLEO
+cd ~/Desktop/Cartella/space
 npm install
 npm run dev        # http://localhost:3000
 ```
@@ -22,7 +22,7 @@ Configurazione via `.env.local` (vedi `.env.example`):
 | `MIND_VAULT_PATH` | `~/Documents/Mind` | percorso del vault |
 | `MIND_VAULT_NAME` | `Mind` | nome vault per i deep-link `obsidian://` |
 | `GRAPHIFY_BIN` | `graphify` nel PATH | CLI per le query sul grafo |
-| `NUCLEO_AGENT_MODEL` | `claude-opus-4-8` | modello dell'agente |
+| `SPACE_AGENT_MODEL` | `claude-opus-4-8` | modello dell'agente |
 | `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_API_KEY` | — | credenziali agente (vedi sotto) |
 
 ### Collegare l'agente (una tantum)
@@ -33,7 +33,7 @@ UNA di queste credenziali:
 1. **Col tuo abbonamento Claude** (consigliato): nel Terminale `claude setup-token`,
    poi incolla il token in `.env.local` come `CLAUDE_CODE_OAUTH_TOKEN=...`.
    Se la CLI manca: `npm i -g @anthropic-ai/claude-code` e `claude /login`.
-   In alternativa basta che la CLI `claude` sia loggata su questo Mac: NUCLEO la rileva da solo.
+   In alternativa basta che la CLI `claude` sia loggata su questo Mac: space la rileva da solo.
 2. **Con una chiave API**: `ANTHROPIC_API_KEY=sk-ant-...` in `.env.local` (fatturazione a consumo).
 
 Senza credenziali la console dell'agente spiega esattamente questi passi.
@@ -61,7 +61,7 @@ src/components/       galaxy/ (r3f), panels/, hud/, NotaDrawer, ConsoleAgente, A
 ```
 
 Il watcher invalida le cache e notifica il browser via SSE: modifichi una nota in
-Obsidian e NUCLEO si aggiorna da solo (galassia compresa).
+Obsidian e space si aggiorna da solo (galassia compresa).
 
 ## La galassia: mappatura dati
 
@@ -123,7 +123,7 @@ strumenti file-only dentro il vault (niente shell).
 
 - Il grafo semantico e un artefatto locale di Graphify: se manca `graph.json`, la
   galassia si costruisce comunque da note e wikilink (senza community ed entita).
-- Se sviluppi NUCLEO da dentro una sessione Claude Code, il runner del preview puo non
+- Se sviluppi space da dentro una sessione Claude Code, il runner del preview puo non
   avere i permessi macOS su `~/Documents`: in quel caso lancia `next dev` da un
   terminale normale. L'app in se non ha questo problema.
 - Privacy: nessuna telemetria; i dati finanziari restano nel parsing locale; l'agente

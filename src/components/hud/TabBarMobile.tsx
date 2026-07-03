@@ -26,7 +26,7 @@ export function TabBarMobile() {
         borderTop: "1px solid var(--linea)",
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
-      aria-label="Navigazione NUCLEO"
+      aria-label="Navigazione space"
     >
       <ul className="flex overflow-x-auto px-2 py-1.5" style={{ scrollbarWidth: "none" }}>
         {VOCI.map((v) => {

@@ -143,7 +143,7 @@ export function CommandBar({
               ? "Cerca una stella o dai un comando all'agente…"
               : "Cerca nel vault… (/)"
           }
-          aria-label="Command bar del nucleo"
+          aria-label="Barra comandi"
           className="h-11 w-full bg-transparent text-[14px] outline-none placeholder:text-[color:var(--inchiostro-3)]"
         />
         <kbd

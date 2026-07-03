@@ -93,7 +93,7 @@ function Evento({ e, decisioni }: { e: EventoConsole; decisioni: Map<string, "al
               <button
                 type="button"
                 className="bottone-secondario text-[12.5px]"
-                onClick={() => rispondiPermesso(e.id, "deny", "L'utente ha negato dalla console NUCLEO")}
+                onClick={() => rispondiPermesso(e.id, "deny", "L'utente ha negato dalla console space")}
               >
                 Nega
               </button>
@@ -164,7 +164,7 @@ export function ConsoleAgente() {
           style={{ borderColor: "var(--linea)" }}
         >
           <h2 className="text-[13px] font-semibold" style={{ color: "var(--oro)" }}>
-            Agente del nucleo
+            Agente
             {inEsecuzione && (
               <span className="ml-2 font-normal" style={{ color: "var(--inchiostro-2)" }}>
                 al lavoro sul vault…

@@ -98,7 +98,7 @@ export async function quickCapture(testo: string): Promise<{ rel: string; log: s
   const breve = pulito.length > 90 ? pulito.slice(0, 87) + "..." : pulito;
   const log = await appendLog(
     "ingest",
-    `Quick capture da NUCLEO in [[Note da sistemare]]: "${breve}"`
+    `Quick capture da space in [[Note da sistemare]]: "${breve}"`
   );
   return { rel, log };
 }

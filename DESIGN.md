@@ -1,4 +1,4 @@
-# DESIGN.md - NUCLEO
+# DESIGN.md - space
 
 Estetica: cosmica ma calda e fotografica. Reference: `public/reference/NGC_4414.jpg`.
 Un solo registro tipografico (product), una superficie brand (la galassia).
