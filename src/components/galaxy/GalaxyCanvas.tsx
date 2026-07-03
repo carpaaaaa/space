@@ -37,10 +37,14 @@ export default function GalaxyCanvas() {
   const setGalassia = useUI((s) => s.setGalassia);
   const inGalassia = useUI((s) => s.pannello === "galassia");
   const aspetto = useUI((s) => s.aspetto);
-  const aspettoVersione = useUI((s) => s.aspettoVersione);
   const tema = temaPerId(aspetto.tema);
 
-  // tema/modalita colore -> ricolora i buffer della galassia
+  // tema/modalita colore -> ricolora i buffer della galassia.
+  // coloreVersione si incrementa DOPO la ricolorazione: i layer sono figli e i
+  // loro effetti girano prima di questo (padre), quindi devono risincronizzare
+  // sui colori nuovi. Usare aspettoVersione dallo store li faceva sincronizzare
+  // un cambio-tema indietro (stelle ferme al tema precedente).
+  const [coloreVersione, setColoreVersione] = useState(0);
   useEffect(() => {
     if (!g) return;
     ricoloraGalassia(g, {
@@ -49,6 +53,7 @@ export default function GalaxyCanvas() {
       polvere: tema.galassia.polvere,
       mode: aspetto.coloreMode,
     });
+    setColoreVersione((v) => v + 1);
   }, [g, tema, aspetto.coloreMode]);
   useEffect(() => {
     let vivo = true;
@@ -88,7 +93,7 @@ export default function GalaxyCanvas() {
             alpha={1}
             scala={2.2}
             filtriVersione={filtriVersione}
-            aspettoVersione={aspettoVersione}
+            aspettoVersione={coloreVersione}
             scalaExtra={aspetto.scalaStelle}
             glowExtra={aspetto.glow}
             durezza={aspetto.durezza}
@@ -102,7 +107,7 @@ export default function GalaxyCanvas() {
               scala={1.9}
               lod={[36, 120]}
               filtriVersione={filtriVersione}
-              aspettoVersione={aspettoVersione}
+              aspettoVersione={coloreVersione}
               scalaExtra={aspetto.scalaStelle}
               glowExtra={aspetto.glow}
               durezza={aspetto.durezza}
@@ -115,7 +120,7 @@ export default function GalaxyCanvas() {
             alpha={0.55}
             scala={1.7}
             filtriVersione={filtriVersione}
-            aspettoVersione={aspettoVersione}
+            aspettoVersione={coloreVersione}
             scalaExtra={aspetto.scalaStelle}
             glowExtra={aspetto.glow}
             durezza={aspetto.durezza}
@@ -128,7 +133,7 @@ export default function GalaxyCanvas() {
             scala={3.6}
             additive={false}
             filtriVersione={filtriVersione}
-            aspettoVersione={aspettoVersione}
+            aspettoVersione={coloreVersione}
             scalaExtra={aspetto.scalaStelle}
             durezza={aspetto.durezza}
           />
