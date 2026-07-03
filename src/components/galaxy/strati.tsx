@@ -6,6 +6,15 @@ import * as THREE from "three";
 import type { Galassia } from "@/lib/galassia";
 import { materialeStelle, geometriaSubset } from "./materiali";
 
+/** Aggancia un materiale a un ref per mutarne le uniform dentro useFrame. */
+function useMaterialeRef(mat: THREE.ShaderMaterial) {
+  const ref = useRef<THREE.ShaderMaterial | null>(null);
+  useEffect(() => {
+    ref.current = mat;
+  }, [mat]);
+  return ref;
+}
+
 /** Un layer di stelle con aggiornamento visibilita. */
 export function StratoStelle({
   g,
@@ -47,11 +56,13 @@ export function StratoStelle({
     };
   }, [geom, mat]);
 
+  const matRef = useMaterialeRef(mat);
   useFrame(({ camera }) => {
-    if (!lod) return;
+    const m = matRef.current;
+    if (!m || !lod) return;
     const dist = camera.position.length();
     const t = THREE.MathUtils.clamp((lod[1] - dist) / (lod[1] - lod[0]), 0, 1);
-    mat.uniforms.uAlpha.value = alpha * t;
+    m.uniforms.uAlpha.value = alpha * t;
   });
 
   return <points geometry={geom} material={mat} frustumCulled={false} />;
@@ -93,14 +104,17 @@ export function Nucleo({ ridotto }: { ridotto: boolean }) {
     [geom, mat]
   );
 
+  const matRef = useMaterialeRef(mat);
   useFrame(({ clock }) => {
+    const m = matRef.current;
+    if (!m) return;
     if (ridotto) {
-      mat.uniforms.uScala.value = 2.4;
+      m.uniforms.uScala.value = 2.4;
       return;
     }
     // respiro lento ~7s, ampiezza minima: glow diffuso, non un "pulse"
     const t = clock.elapsedTime;
-    mat.uniforms.uScala.value = 2.4 * (1 + Math.sin((t * Math.PI * 2) / 7) * 0.025);
+    m.uniforms.uScala.value = 2.4 * (1 + Math.sin((t * Math.PI * 2) / 7) * 0.025);
   });
 
   return <points geometry={geom} material={mat} frustumCulled={false} />;

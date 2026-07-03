@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Galassia, applicaFiltri, caricaGalassia } from "@/lib/galassia";
+import { Galassia, caricaGalassia } from "@/lib/galassia";
 import { useUI } from "@/state/store";
 import { ControlliCamera } from "./camera";
 import { Filamenti } from "./filamenti";
@@ -11,10 +11,13 @@ import { Nucleo, PolvereBracci, SfondoAmbientale, StratoStelle } from "./strati"
 import { EtichetteOverlay, MappaEtichette, PonteEtichette, TooltipStella } from "./etichette";
 
 function useReducedMotion(): boolean {
-  const [ridotto, setRidotto] = useState(false);
+  const [ridotto, setRidotto] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setRidotto(mq.matches);
     const fn = (e: MediaQueryListEvent) => setRidotto(e.matches);
     mq.addEventListener("change", fn);
     return () => mq.removeEventListener("change", fn);
@@ -25,8 +28,7 @@ function useReducedMotion(): boolean {
 export default function GalaxyCanvas() {
   const [g, setG] = useState<Galassia | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
-  const [filtriVersione, setFiltriVersione] = useState(0);
-  const filtri = useUI((s) => s.filtri);
+  const filtriVersione = useUI((s) => s.filtriVersione);
   const vaultVersion = useUI((s) => s.vaultVersion);
   const ridotto = useReducedMotion();
   const etichetteRefs = useRef<MappaEtichette>(new Map());
@@ -48,13 +50,6 @@ export default function GalaxyCanvas() {
       vivo = false;
     };
   }, [vaultVersion, setGalassia]);
-
-  // filtri -> visibilita
-  useEffect(() => {
-    if (!g) return;
-    applicaFiltri(g, filtri);
-    setFiltriVersione((v) => v + 1);
-  }, [g, filtri]);
 
   const conteggi = useMemo(() => g?.payload.conteggi, [g]);
 

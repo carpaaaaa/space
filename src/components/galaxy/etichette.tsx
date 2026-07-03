@@ -9,6 +9,11 @@ import { useUI } from "@/state/store";
 
 export type MappaEtichette = Map<string, HTMLDivElement>;
 
+// temp module-level: un solo thread rAF, niente allocazioni per frame
+const M_TEMP = new THREE.Matrix4();
+const V_TEMP = new THREE.Vector3();
+const V_STELLA = new THREE.Vector3();
+
 /**
  * Dentro il canvas: proietta le posizioni 3D e muove direttamente i div
  * delle etichette (niente setState per frame).
@@ -21,14 +26,15 @@ export function PonteEtichette({
   refs: MutableRefObject<MappaEtichette>;
 }) {
   const { camera, size } = useThree();
-  const m = useRef(new THREE.Matrix4());
-  const v = useRef(new THREE.Vector3());
   const frame = useRef(0);
 
+  /* eslint-disable react-hooks/immutability --
+     useFrame gira nel loop rAF, non nel render: la mutazione diretta di
+     ref e stili DOM e il punto di questo componente (niente setState a 30fps) */
   useFrame(() => {
     frame.current += 1;
     if (frame.current % 2 !== 0) return; // 30fps bastano per le etichette
-    m.current.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    M_TEMP.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     const distCam = camera.position.length();
 
     for (const [chiave, el] of refs.current) {
@@ -51,21 +57,22 @@ export function PonteEtichette({
         y = g.pos[i * 3 + 1];
         z = g.pos[i * 3 + 2];
         if (g.vis[i] > 0) {
-          const dStella = camera.position.distanceTo(new THREE.Vector3(x, y, z));
+          const dStella = camera.position.distanceTo(V_STELLA.set(x, y, z));
           const god = (g.flag[i] & F_GOD) !== 0;
           const vicino = THREE.MathUtils.clamp((190 - dStella) / 80, 0, 1);
           opacita = god ? Math.max(0.55, vicino) : vicino * 0.9;
         }
       }
-      v.current.set(x, y, z).applyMatrix4(m.current);
-      if (v.current.z < -1 || v.current.z > 1) opacita = 0;
-      const sx = ((v.current.x + 1) / 2) * size.width;
-      const sy = ((1 - v.current.y) / 2) * size.height;
+      V_TEMP.set(x, y, z).applyMatrix4(M_TEMP);
+      if (V_TEMP.z < -1 || V_TEMP.z > 1) opacita = 0;
+      const sx = ((V_TEMP.x + 1) / 2) * size.width;
+      const sy = ((1 - V_TEMP.y) / 2) * size.height;
       el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
       el.style.opacity = opacita.toFixed(2);
       el.style.visibility = opacita <= 0.01 ? "hidden" : "visible";
     }
   });
+  /* eslint-enable react-hooks/immutability */
 
   return null;
 }

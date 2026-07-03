@@ -2,25 +2,16 @@
 
 import { useUI } from "@/state/store";
 
-/** Filtri della galassia: aree, god nodes, gap, filamenti, sezioni. */
-export function FiltriGalassia() {
-  const galassia = useUI((s) => s.galassia);
-  const filtri = useUI((s) => s.filtri);
-  const setFiltri = useUI((s) => s.setFiltri);
-  const toggleArea = useUI((s) => s.toggleArea);
-
-  if (!galassia) return null;
-  const aree = galassia.payload.aree.filter((a) => a.braccio != null);
-
-  const Toggle = ({
-    attivo,
-    onClick,
-    children,
-  }: {
-    attivo: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
-  }) => (
+function Toggle({
+  attivo,
+  onClick,
+  children,
+}: {
+  attivo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
     <button
       type="button"
       onClick={onClick}
@@ -35,6 +26,17 @@ export function FiltriGalassia() {
       {children}
     </button>
   );
+}
+
+/** Filtri della galassia: aree, god nodes, gap, filamenti, sezioni. */
+export function FiltriGalassia() {
+  const galassia = useUI((s) => s.galassia);
+  const filtri = useUI((s) => s.filtri);
+  const setFiltri = useUI((s) => s.setFiltri);
+  const toggleArea = useUI((s) => s.toggleArea);
+
+  if (!galassia) return null;
+  const aree = galassia.payload.aree.filter((a) => a.braccio != null);
 
   return (
     <div

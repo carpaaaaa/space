@@ -39,6 +39,12 @@ function ChipNota({
 
 export function NotaDrawer() {
   const rel = useUI((s) => s.notaAperta);
+  if (!rel) return null;
+  // key={rel}: lo stato interno riparte pulito a ogni cambio di nota
+  return <NotaDrawerInner key={rel} rel={rel} />;
+}
+
+function NotaDrawerInner({ rel }: { rel: string }) {
   const chiudi = useUI((s) => s.chiudiNota);
   const apriNota = useUI((s) => s.apriNota);
   const vola = useUI((s) => s.vola);
@@ -49,25 +55,23 @@ export function NotaDrawer() {
   const [errore, setErrore] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!rel) {
-      setNota(null);
-      return;
-    }
     let vivo = true;
-    setErrore(null);
     fetch(`/api/note?rel=${encodeURIComponent(rel)}`)
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).errore ?? "Nota non leggibile");
         return r.json();
       })
-      .then((d) => vivo && setNota(d))
+      .then((d) => {
+        if (vivo) {
+          setNota(d);
+          setErrore(null);
+        }
+      })
       .catch((e) => vivo && setErrore(e.message));
     return () => {
       vivo = false;
     };
   }, [rel, vaultVersion]);
-
-  if (!rel) return null;
 
   // i wikilink dentro la prosa aprono la nota citata
   const onClickProsa = (e: React.MouseEvent) => {

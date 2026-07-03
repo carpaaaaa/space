@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { Galassia } from "@/lib/galassia";
+import { applicaFiltri, type Galassia } from "@/lib/galassia";
 
 export type Pannello =
   | "galassia"
@@ -43,6 +43,8 @@ interface UIState {
   setSelezione: (i: number | null) => void;
 
   filtri: Filtri;
+  /** cresce a ogni cambio filtri: i layer risincronizzano la visibilita */
+  filtriVersione: number;
   setFiltri: (f: Partial<Filtri>) => void;
   toggleArea: (key: string) => void;
 
@@ -80,14 +82,22 @@ export const useUI = create<UIState>((set) => ({
     filamenti: false,
     sezioni: true,
   },
-  setFiltri: (f) => set((s) => ({ filtri: { ...s.filtri, ...f } })),
+  filtriVersione: 0,
+  setFiltri: (f) =>
+    set((s) => {
+      const filtri = { ...s.filtri, ...f };
+      if (s.galassia) applicaFiltri(s.galassia, filtri);
+      return { filtri, filtriVersione: s.filtriVersione + 1 };
+    }),
   toggleArea: (key) =>
-    set((s) => ({
-      filtri: {
+    set((s) => {
+      const filtri = {
         ...s.filtri,
         aree: { ...s.filtri.aree, [key]: !(s.filtri.aree[key] ?? true) },
-      },
-    })),
+      };
+      if (s.galassia) applicaFiltri(s.galassia, filtri);
+      return { filtri, filtriVersione: s.filtriVersione + 1 };
+    }),
 
   volaA: { idx: null, n: 0 },
   vola: (idx) => set((s) => ({ volaA: { idx, n: s.volaA.n + 1 } })),
@@ -99,5 +109,9 @@ export const useUI = create<UIState>((set) => ({
   setGalassiaPronta: (v) => set({ galassiaPronta: v }),
 
   galassia: null,
-  setGalassia: (g) => set({ galassia: g }),
+  setGalassia: (g) =>
+    set((s) => {
+      if (g) applicaFiltri(g, s.filtri);
+      return { galassia: g, filtriVersione: s.filtriVersione + 1 };
+    }),
 }));

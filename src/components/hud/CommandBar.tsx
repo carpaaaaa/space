@@ -55,11 +55,7 @@ export function CommandBar({
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
-    if (!testo.trim()) {
-      setSuggerimenti([]);
-      setAttivo(-1);
-      return;
-    }
+    if (!testo.trim()) return;
     debounce.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?mode=local&q=${encodeURIComponent(testo)}`);
@@ -120,8 +116,13 @@ export function CommandBar({
           ref={input}
           value={testo}
           onChange={(e) => {
-            setTesto(e.target.value);
+            const v = e.target.value;
+            setTesto(v);
             setAperta(true);
+            if (!v.trim()) {
+              setSuggerimenti([]);
+              setAttivo(-1);
+            }
           }}
           onFocus={() => setAperta(true)}
           onBlur={() => setTimeout(() => setAperta(false), 150)}
