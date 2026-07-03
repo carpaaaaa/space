@@ -1,42 +1,62 @@
 # space
 
-Il cervello del vault Mind. Un cockpit web locale che legge il vault Obsidian
-`~/Documents/Mind` live, lo mostra come una galassia (reference: NGC 4414) e permette di
-comandare un agente Claude che scrive nelle note rispettando le regole di `_CLAUDE.md`.
+Il tuo vault Obsidian come una galassia. space e un cockpit web locale che legge
+il vault live, lo disegna come una galassia a spirale (reference: NGC 4414) e ti
+permette di comandare un agente AI che lavora sulle note con conferme diff.
 
-Tutto gira su questo Mac. I pannelli non fanno mai rete esterna; l'API Anthropic viene
-chiamata solo quando dai un comando esplicito all'agente.
+Tutto gira sulla tua macchina. I pannelli non fanno mai rete esterna; l'AI viene
+chiamata solo quando dai un comando esplicito all'agente (e puo essere un
+modello locale: Ollama/Hermes).
 
-## Avvio
+## Installazione
 
 ```bash
-cd ~/Desktop/Cartella/space
+git clone https://github.com/carpaaaaa/space.git
+cd space
 npm install
 npm run dev        # http://localhost:3000
 ```
 
-Configurazione via `.env.local` (vedi `.env.example`):
+Al primo avvio space cerca il vault in `~/Documents/Mind` o nel percorso di
+`SPACE_VAULT_PATH`; senza configurazione scopre da solo le aree (le cartelle
+top-level) e genera una palette.
 
-| Variabile | Default | Uso |
-|---|---|---|
-| `MIND_VAULT_PATH` | `~/Documents/Mind` | percorso del vault |
-| `MIND_VAULT_NAME` | `Mind` | nome vault per i deep-link `obsidian://` |
-| `GRAPHIFY_BIN` | `graphify` nel PATH | CLI per le query sul grafo |
-| `SPACE_AGENT_MODEL` | `claude-opus-4-8` | modello dell'agente |
-| `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_API_KEY` | — | credenziali agente (vedi sotto) |
+**La via piu comoda: fatti configurare da Claude.** Apri Claude Code in questa
+cartella e incollagli il prompt di [PROMPT-CLAUDE.md](PROMPT-CLAUDE.md):
+ispeziona il tuo vault e genera tutto lui.
 
-### Collegare l'agente (una tantum)
+### Configurazione manuale
 
-I pannelli e la galassia funzionano subito. I comandi in italiano all'agente richiedono
-UNA di queste credenziali:
+Copia `space.config.example.json` in `space.config.json` e personalizza:
+percorso e nome del vault, aree con colori e bracci della galassia, cartelle
+polvere (log, archivi), esclusioni, file di regole per l'agente, modelli AI.
+Ogni campo e opzionale e documentato nell'example. Il file e gitignored: la tua
+configurazione resta tua.
 
-1. **Col tuo abbonamento Claude** (consigliato): nel Terminale `claude setup-token`,
-   poi incolla il token in `.env.local` come `CLAUDE_CODE_OAUTH_TOKEN=...`.
-   Se la CLI manca: `npm i -g @anthropic-ai/claude-code` e `claude /login`.
-   In alternativa basta che la CLI `claude` sia loggata su questo Mac: space la rileva da solo.
-2. **Con una chiave API**: `ANTHROPIC_API_KEY=sk-ant-...` in `.env.local` (fatturazione a consumo).
+Variabili `.env.local` (vedi `.env.example`):
 
-Senza credenziali la console dell'agente spiega esattamente questi passi.
+| Variabile | Uso |
+|---|---|
+| `SPACE_VAULT_PATH` | percorso del vault (vince sul config) |
+| `SPACE_VAULT_NAME` | nome vault per i deep-link `obsidian://` |
+| `GRAPHIFY_BIN` | CLI graphify per le query sul grafo (opzionale) |
+| `SPACE_AGENT_MODEL` | id del modello agente di default |
+| `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_API_KEY` | credenziali per i modelli Claude |
+
+### L'agente: scegli il tuo modello
+
+Nel selettore della barra comandi scegli tra i modelli configurati in
+`space.config.json`:
+
+- **Claude** (`provider: "claude"`): serve UNA credenziale una-tantum:
+  `claude setup-token` col tuo abbonamento (token in `.env.local` come
+  `CLAUDE_CODE_OAUTH_TOKEN`) oppure una `ANTHROPIC_API_KEY`.
+- **Modello locale o OpenAI-compatibile** (`provider: "openai"`): Ollama,
+  LM Studio, vLLM o un endpoint remoto. Gratuito e tutto in locale con
+  es. `ollama pull hermes3`. Nessuna credenziale se l'endpoint e locale.
+
+Senza credenziali la console dell'agente spiega esattamente cosa fare.
+Galassia e pannelli funzionano comunque, sempre.
 
 ## Architettura
 

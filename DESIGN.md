@@ -22,10 +22,9 @@ Nucleo e accenti:
 - `--stella: #dfe9ff`, `--stella-2: #bcd3ff`
 - `--errore: #c96a5a`, `--ok: #7d9d78`
 
-Aree (Flexoki del vault, NON cambiare):
-inbox #E8B84A · design #D97757 · finanze #D6A53A · archviz #4FA3A5 · content #C77B91 ·
-pc #6487B6 · casa #7D9D78 · idee #9886B8 · ai #B07AA1 · archivio #77736B · logs #979293 ·
-sistema #E8D5A8
+Aree: i colori vengono da space.config.json (o dalla palette auto-generata) e
+diventano CSS var runtime `--area-<key>`. Sceglili desaturati e leggibili su
+fondo scuro; il default in globals.css e solo un fallback.
 
 ## Tipografia
 
