@@ -30,11 +30,13 @@ export function AppShell() {
     <main className="relative h-dvh w-full overflow-hidden">
       <GalaxyCanvas />
 
-      {/* velo caldo quando un pannello copre la galassia */}
+      {/* velo caldo che smorza la galassia: sta SOTTO la nav e la barra
+          comandi (z-hud 10), sopra la galassia (z 0-1). Cosi il menu di sinistra
+          resta cliccabile e puoi uscire dalla sezione. */}
       {pannello !== "galassia" && (
         <div
           className="absolute inset-0"
-          style={{ background: "rgba(5, 6, 10, 0.55)", zIndex: "calc(var(--z-pannello) - 1)" }}
+          style={{ background: "rgba(5, 6, 10, 0.55)", zIndex: 5 }}
           aria-hidden
         />
       )}
