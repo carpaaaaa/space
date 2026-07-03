@@ -1,0 +1,50 @@
+{
+  "$commento": "Copia questo file in space.config.json e personalizzalo. Ogni campo e opzionale: senza config, space scopre le aree dalle cartelle del tuo vault e genera i colori da solo.",
+
+  "vault": {
+    "path": "~/Documents/IlMioVault",
+    "nome": "IlMioVault"
+  },
+
+  "$commento_aree": "Le cartelle top-level del vault diventano i bracci della galassia. 'polvere: true' le rende corsie di polvere (log, archivi). Senza questa lista: auto-scoperta.",
+  "aree": [
+    { "cartella": "Progetti", "nome": "Progetti", "colore": "#D97757", "braccio": 0 },
+    { "cartella": "Note", "nome": "Note", "colore": "#6487B6", "braccio": 1 },
+    { "cartella": "Archivio", "nome": "Archivio", "colore": "#77736B", "polvere": true }
+  ],
+
+  "$commento_escludi": "Cartelle da non indicizzare (allegati e template tipici sono gia esclusi).",
+  "escludi": [],
+  "escludiPrefissi": [],
+
+  "agente": {
+    "$commento_regole": "File del vault (es. CLAUDE.md) che l'agente legge come manuale. Vuoto = auto-rilevamento di _CLAUDE.md / CLAUDE.md / AGENTS.md / index.md.",
+    "regole": [],
+    "$commento_protetti": "File che l'agente puo modificare solo con la tua conferma.",
+    "protetti": [],
+    "$commento_modelli": "I modelli tra cui scegliere nella barra comandi. provider 'claude' usa Claude Code/API; provider 'openai' punta a un endpoint OpenAI-compatibile locale (Ollama, LM Studio) o remoto. La chiave, se serve, va in .env.local nella variabile indicata da chiaveEnv.",
+    "modelli": [
+      { "id": "claude-opus-4-8", "etichetta": "Claude Opus 4.8", "provider": "claude" },
+      { "id": "claude-sonnet-5", "etichetta": "Claude Sonnet 5", "provider": "claude" },
+      {
+        "id": "hermes3",
+        "etichetta": "Hermes 3 (locale)",
+        "provider": "openai",
+        "baseUrl": "http://localhost:11434/v1"
+      },
+      {
+        "id": "il-tuo-modello",
+        "etichetta": "Provider con chiave",
+        "provider": "openai",
+        "baseUrl": "https://esempio.com/v1",
+        "chiaveEnv": "LA_TUA_CHIAVE_ENV"
+      }
+    ]
+  },
+
+  "$commento_graphify": "Solo se usi Graphify: percorsi (relativi al vault) del grafo semantico e del report. Se mancano, la galassia si costruisce da note e wikilink.",
+  "graphify": {
+    "graphJson": "graphify/graph.json",
+    "report": "graphify/GRAPH_REPORT.md"
+  }
+}

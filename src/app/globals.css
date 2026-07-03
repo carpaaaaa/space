@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Token space (vedi DESIGN.md)                                       */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --fondo: #05060a;
+  --fondo-2: #0a0c14;
+  --superficie: #100f14;
+  --superficie-2: #16141c;
+  --linea: rgba(190, 160, 110, 0.14);
+  --linea-forte: rgba(190, 160, 110, 0.28);
+
+  --inchiostro: #ece5d8;
+  --inchiostro-2: #b0a795;
+  --inchiostro-3: #837a6b;
+
+  --oro: #f6e7c1;
+  --oro-2: #ffd98a;
+  --ambra: #ffbf69;
+  --polvere: #8a6a44;
+  --polvere-2: #6b4f34;
+  --stella: #dfe9ff;
+  --stella-2: #bcd3ff;
+  --errore: #c96a5a;
+  --ok: #7d9d78;
+
+  --area-inbox: #e8b84a;
+  --area-design: #d97757;
+  --area-finanze: #d6a53a;
+  --area-archviz: #4fa3a5;
+  --area-content: #c77b91;
+  --area-pc: #6487b6;
+  --area-casa: #7d9d78;
+  --area-idee: #9886b8;
+  --area-ai: #b07aa1;
+  --area-archivio: #77736b;
+  --area-logs: #979293;
+  --area-sistema: #e8d5a8;
+
+  --z-pannello: 8;
+  --z-hud: 10;
+  --z-drawer: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --z-tooltip: 60;
+
+  --font-ui: "Instrument Sans Variable", "Instrument Sans", system-ui, sans-serif;
+  --font-dati: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+
+  --raggio: 10px;
+  --raggio-s: 6px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(120% 90% at 50% 38%, var(--fondo-2) 0%, var(--fondo) 68%) fixed,
+    var(--fondo);
+  color: var(--inchiostro);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+::selection {
+  background: rgba(255, 217, 138, 0.28);
+}
+
+/* grana fotografica */
+.grana::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: overlay;
+}
+
+/* focus visibile, caldo */
+:focus-visible {
+  outline: 2px solid var(--oro-2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* scrollbar discreta (nativa, solo colori) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 106, 68, 0.35) transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Primitive condivise                                                 */
+/* ------------------------------------------------------------------ */
+
+.pannello-superficie {
+  background: color-mix(in srgb, var(--superficie) 96%, transparent);
+  border: 1px solid var(--linea);
+  border-radius: var(--raggio);
+}
+
+.mono {
+  font-family: var(--font-dati);
+  font-variant-numeric: tabular-nums;
+}
+
+.bottone-primario {
+  background: var(--oro-2);
+  color: #241a08;
+  font-weight: 600;
+  border-radius: var(--raggio-s);
+  padding: 7px 14px;
+  transition: filter 160ms ease-out, transform 160ms ease-out;
+}
+.bottone-primario:hover {
+  filter: brightness(1.06);
+}
+.bottone-primario:active {
+  transform: translateY(1px);
+}
+.bottone-primario:disabled {
+  filter: saturate(0.4) brightness(0.75);
+  cursor: not-allowed;
+}
+
+.bottone-secondario {
+  border: 1px solid var(--linea-forte);
+  color: var(--inchiostro);
+  border-radius: var(--raggio-s);
+  padding: 6px 12px;
+  transition: background 160ms ease-out, border-color 160ms ease-out;
+}
+.bottone-secondario:hover {
+  background: var(--superficie-2);
+  border-color: var(--polvere);
+}
+
+.chip-area {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--inchiostro-2);
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+/* pallino statico colore area: mai animato (il pulsing dot e bandito) */
+.chip-area i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--c, var(--inchiostro-3));
+  flex: none;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* prosa delle note renderizzate */
+.prosa {
+  max-width: 68ch;
+  color: var(--inchiostro);
+}
+.prosa h1 { font-size: 24px; font-weight: 600; margin: 18px 0 8px; }
+.prosa h2 { font-size: 18px; font-weight: 600; margin: 20px 0 6px; color: var(--oro); }
+.prosa h3 { font-size: 15.5px; font-weight: 600; margin: 14px 0 4px; }
+.prosa p { margin: 8px 0; color: var(--inchiostro); }
+.prosa a { color: var(--oro-2); text-decoration: none; border-bottom: 1px solid rgba(255, 217, 138, 0.3); }
+.prosa a:hover { border-bottom-color: var(--oro-2); }
+.prosa ul, .prosa ol { padding-left: 22px; margin: 8px 0; }
+.prosa li { margin: 3px 0; }
+.prosa code { font-family: var(--font-dati); font-size: 12.5px; background: var(--superficie-2); padding: 1px 5px; border-radius: 4px; color: var(--oro); }
+.prosa pre { background: var(--superficie-2); border: 1px solid var(--linea); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 10px 0; }
+.prosa pre code { background: none; padding: 0; color: var(--inchiostro-2); }
+.prosa blockquote { background: var(--superficie-2); border-radius: 8px; padding: 8px 12px; color: var(--inchiostro-2); margin: 10px 0; }
+.prosa table { border-collapse: collapse; font-size: 13px; margin: 10px 0; display: block; overflow-x: auto; }
+.prosa th, .prosa td { border: 1px solid var(--linea); padding: 5px 10px; text-align: left; }
+.prosa th { color: var(--inchiostro-2); font-weight: 500; }
+.prosa td { font-family: var(--font-dati); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.prosa input[type="checkbox"] { accent-color: var(--oro-2); margin-right: 6px; }
+.prosa hr { border: none; border-top: 1px solid var(--linea); margin: 16px 0; }
+
+/* transizioni pannelli */
+.pannello-enter {
+  animation: pannello-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pannello-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pannello-enter {
+    animation: none;
+  }
+  * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
