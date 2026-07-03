@@ -27,7 +27,8 @@ export interface TaskBuckets {
   oggiISO: string;
 }
 
-const RE_TASK = /^\s*[-*]\s+\[( |x|X)\]\s+(.+)$/;
+// anche dentro i callout (> - [x] ...), come il plugin Tasks
+const RE_TASK = /^\s*(?:>\s*)*[-*]\s+\[( |x|X)\]\s+(.+)$/;
 const RE_DUE = /📅\s*(\d{4}-\d{2}-\d{2})/;
 const RE_DONE = /✅\s*(\d{4}-\d{2}-\d{2})/;
 const RE_TAG = /#[\p{L}\p{N}_\/-]+/gu;
