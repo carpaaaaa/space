@@ -35,6 +35,7 @@ export default function GalaxyCanvas() {
 
   // caricamento (e ricaricamento quando il vault cambia su disco)
   const setGalassia = useUI((s) => s.setGalassia);
+  const inGalassia = useUI((s) => s.pannello === "galassia");
   useEffect(() => {
     let vivo = true;
     caricaGalassia()
@@ -106,8 +107,8 @@ export default function GalaxyCanvas() {
         </Canvas>
       )}
 
-      {g && <EtichetteOverlay g={g} refs={etichetteRefs} />}
-      {g && <TooltipStella g={g} />}
+      {g && inGalassia && <EtichetteOverlay g={g} refs={etichetteRefs} />}
+      {g && inGalassia && <TooltipStella g={g} />}
 
       {!g && !errore && (
         <div className="absolute inset-0 grid place-items-center">
@@ -129,7 +130,7 @@ export default function GalaxyCanvas() {
         </div>
       )}
 
-      {conteggi && (
+      {conteggi && inGalassia && (
         <div
           className="mono pointer-events-none absolute bottom-3 right-4 text-[10.5px]"
           style={{ color: "var(--inchiostro-3)", zIndex: "var(--z-hud)" }}

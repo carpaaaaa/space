@@ -1,22 +1,39 @@
 "use client";
 
 import { useUI } from "@/state/store";
+import { PannelloOggi } from "./PannelloOggi";
+import { PannelloProgetti } from "./PannelloProgetti";
+import { PannelloFinanze } from "./PannelloFinanze";
+import { PannelloInbox } from "./PannelloInbox";
+import { PannelloLog } from "./PannelloLog";
+import { PannelloRicerca } from "./PannelloRicerca";
 
-/** Contenitore dei pannelli operativi (riempiti nella fase 3). */
-export function Pannelli() {
+/** Contenitore dei pannelli operativi sopra la galassia. */
+export function Pannelli({
+  onSmista,
+  agentePronto = false,
+}: {
+  onSmista?: () => void;
+  agentePronto?: boolean;
+}) {
   const pannello = useUI((s) => s.pannello);
 
   return (
     <section
-      className="pannello-enter absolute bottom-6 left-[210px] right-6 top-[76px] overflow-y-auto max-md:inset-x-3 max-md:top-16"
+      key={pannello}
+      className="pannello-enter absolute bottom-5 left-[200px] right-5 top-[72px] max-md:inset-x-2 max-md:bottom-[64px] max-md:top-[64px]"
       style={{ zIndex: "var(--z-pannello)" }}
       aria-label={`Pannello ${pannello}`}
     >
-      <div className="pannello-superficie min-h-full px-7 py-6">
-        <h2 className="text-[22px] font-semibold capitalize">{pannello}</h2>
-        <p className="mt-2 text-[13.5px]" style={{ color: "var(--inchiostro-2)" }}>
-          In costruzione nella fase 3.
-        </p>
+      <div className="pannello-superficie h-full overflow-y-auto px-7 py-6 max-md:px-4">
+        {pannello === "oggi" && <PannelloOggi />}
+        {pannello === "progetti" && <PannelloProgetti />}
+        {pannello === "finanze" && <PannelloFinanze />}
+        {pannello === "inbox" && (
+          <PannelloInbox onSmista={onSmista} agentePronto={agentePronto} />
+        )}
+        {pannello === "log" && <PannelloLog />}
+        {pannello === "ricerca" && <PannelloRicerca />}
       </div>
     </section>
   );

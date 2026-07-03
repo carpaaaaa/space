@@ -45,6 +45,11 @@ function pulisciTesto(raw: string): string {
   t = t.replace(/[⏳🛫]\s*\d{4}-\d{2}-\d{2}/gu, "");
   t = t.replace(/🔁\s*[^📅✅⏳🛫#]*/gu, "");
   for (const [emoji] of PRIORITA) t = t.replaceAll(emoji, "");
+  // wikilink e enfasi diventano testo semplice nella UI
+  t = t.replace(/\[\[([^\[\]|#]+)(?:#[^\[\]|]*)?(?:\|([^\[\]]*))?\]\]/g, (_m, target, alias) =>
+    String(alias || target).trim()
+  );
+  t = t.replace(/\*\*/g, "");
   return t.replace(/\s{2,}/g, " ").trim();
 }
 
