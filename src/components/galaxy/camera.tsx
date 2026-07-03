@@ -40,7 +40,8 @@ export function ControlliCamera({
       x: CASA_POS.x,
       y: CASA_POS.y,
       z: CASA_POS.z,
-      duration: 2.2,
+      // ~1.2s come i fly-to (DESIGN.md: 0.9-1.4s), non una coreografia
+      duration: 1.2,
       ease: "expo.out",
       onUpdate: () => controls.current?.update(),
       onComplete: () => setGalassiaPronta(true),
