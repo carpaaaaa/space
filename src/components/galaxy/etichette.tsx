@@ -81,13 +81,17 @@ export function PonteEtichette({
 export function EtichetteOverlay({
   g,
   refs,
+  soloGod = false,
 }: {
   g: Galassia;
   refs: MutableRefObject<MappaEtichette>;
+  /** su mobile mostriamo solo i god nodes e i nomi area */
+  soloGod?: boolean;
 }) {
   const vola = useUI((s) => s.vola);
   const apriNota = useUI((s) => s.apriNota);
   const setSelezione = useUI((s) => s.setSelezione);
+  const etichette = soloGod ? g.etichetteFisse.filter((e) => e.god) : g.etichetteFisse;
 
   const registra = (chiave: string) => (el: HTMLDivElement | null) => {
     if (el) refs.current.set(chiave, el);
@@ -105,7 +109,7 @@ export function EtichetteOverlay({
           key={"area" + i}
           ref={registra("area|" + i)}
           className="absolute left-0 top-0 select-none whitespace-nowrap"
-          style={{ willChange: "transform, opacity" }}
+          style={{ willChange: "transform, opacity", opacity: 0, visibility: "hidden" }}
         >
           <span
             className="block -translate-x-1/2 -translate-y-1/2 text-[12.5px] font-medium tracking-wide"
@@ -115,12 +119,12 @@ export function EtichetteOverlay({
           </span>
         </div>
       ))}
-      {g.etichetteFisse.map((e) => (
+      {etichette.map((e) => (
         <div
           key={"e" + e.idx}
           ref={registra("stella|" + e.idx)}
           className="absolute left-0 top-0 whitespace-nowrap"
-          style={{ willChange: "transform, opacity" }}
+          style={{ willChange: "transform, opacity", opacity: 0, visibility: "hidden" }}
         >
           <button
             type="button"

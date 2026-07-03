@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useUI } from "@/state/store";
 import { NavRail } from "@/components/hud/NavRail";
+import { TabBarMobile } from "@/components/hud/TabBarMobile";
 import { FiltriGalassia } from "@/components/hud/FiltriGalassia";
 import { CommandBar } from "@/components/hud/CommandBar";
 import { NotaDrawer } from "@/components/NotaDrawer";
@@ -46,6 +47,7 @@ export function AppShell() {
       )}
       <NotaDrawer />
       <ConsoleAgente />
+      <TabBarMobile />
     </main>
   );
 }

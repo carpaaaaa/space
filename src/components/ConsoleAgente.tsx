@@ -154,7 +154,7 @@ export function ConsoleAgente() {
 
   return (
     <section
-      className="pannello-enter absolute bottom-4 left-1/2 flex max-h-[52vh] w-[min(640px,92vw)] -translate-x-1/2 flex-col"
+      className="pannello-enter absolute bottom-4 left-1/2 flex max-h-[52vh] w-[min(640px,92vw)] -translate-x-1/2 flex-col max-md:bottom-[64px]"
       style={{ zIndex: "var(--z-modal)" }}
       aria-label="Console dell'agente"
     >

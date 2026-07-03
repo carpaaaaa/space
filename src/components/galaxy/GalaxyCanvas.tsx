@@ -10,19 +10,17 @@ import { Picker } from "./picker";
 import { Nucleo, PolvereBracci, SfondoAmbientale, StratoStelle } from "./strati";
 import { EtichetteOverlay, MappaEtichette, PonteEtichette, TooltipStella } from "./etichette";
 
-function useReducedMotion(): boolean {
-  const [ridotto, setRidotto] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+function useMedia(queryCss: string): boolean {
+  const [attivo, setAttivo] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(queryCss).matches
   );
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const fn = (e: MediaQueryListEvent) => setRidotto(e.matches);
+    const mq = window.matchMedia(queryCss);
+    const fn = (e: MediaQueryListEvent) => setAttivo(e.matches);
     mq.addEventListener("change", fn);
     return () => mq.removeEventListener("change", fn);
-  }, []);
-  return ridotto;
+  }, [queryCss]);
+  return attivo;
 }
 
 export default function GalaxyCanvas() {
@@ -30,7 +28,8 @@ export default function GalaxyCanvas() {
   const [errore, setErrore] = useState<string | null>(null);
   const filtriVersione = useUI((s) => s.filtriVersione);
   const vaultVersion = useUI((s) => s.vaultVersion);
-  const ridotto = useReducedMotion();
+  const ridotto = useMedia("(prefers-reduced-motion: reduce)");
+  const mobile = useMedia("(max-width: 767px)");
   const etichetteRefs = useRef<MappaEtichette>(new Map());
 
   // caricamento (e ricaricamento quando il vault cambia su disco)
@@ -58,7 +57,7 @@ export default function GalaxyCanvas() {
     <div className="absolute inset-0">
       {g && (
         <Canvas
-          dpr={[1, 2]}
+          dpr={mobile ? [1, 1.75] : [1, 2]}
           camera={{ fov: 55, near: 0.5, far: 2400, position: [4, 210, 290] }}
           gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
           style={{ position: "absolute", inset: 0 }}
@@ -75,15 +74,17 @@ export default function GalaxyCanvas() {
             scala={2.2}
             filtriVersione={filtriVersione}
           />
-          {/* micro-stelle sezione: emergono avvicinandosi */}
-          <StratoStelle
-            g={g}
-            indici={g.idxSezioni}
-            alpha={0.75}
-            scala={1.9}
-            lod={[36, 120]}
-            filtriVersione={filtriVersione}
-          />
+          {/* micro-stelle sezione: emergono avvicinandosi (desktop) */}
+          {!mobile && (
+            <StratoStelle
+              g={g}
+              indici={g.idxSezioni}
+              alpha={0.75}
+              scala={1.9}
+              lod={[36, 120]}
+              filtriVersione={filtriVersione}
+            />
+          )}
           {/* alone dei gap in periferia */}
           <StratoStelle
             g={g}
@@ -107,7 +108,7 @@ export default function GalaxyCanvas() {
         </Canvas>
       )}
 
-      {g && inGalassia && <EtichetteOverlay g={g} refs={etichetteRefs} />}
+      {g && inGalassia && <EtichetteOverlay g={g} refs={etichetteRefs} soloGod={mobile} />}
       {g && inGalassia && <TooltipStella g={g} />}
 
       {!g && !errore && (

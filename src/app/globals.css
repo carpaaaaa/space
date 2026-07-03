@@ -188,7 +188,7 @@ h3 {
 .prosa code { font-family: var(--font-dati); font-size: 12.5px; background: var(--superficie-2); padding: 1px 5px; border-radius: 4px; color: var(--oro); }
 .prosa pre { background: var(--superficie-2); border: 1px solid var(--linea); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 10px 0; }
 .prosa pre code { background: none; padding: 0; color: var(--inchiostro-2); }
-.prosa blockquote { border-left: 2px solid var(--polvere); padding-left: 12px; color: var(--inchiostro-2); margin: 10px 0; }
+.prosa blockquote { background: var(--superficie-2); border-radius: 8px; padding: 8px 12px; color: var(--inchiostro-2); margin: 10px 0; }
 .prosa table { border-collapse: collapse; font-size: 13px; margin: 10px 0; display: block; overflow-x: auto; }
 .prosa th, .prosa td { border: 1px solid var(--linea); padding: 5px 10px; text-align: left; }
 .prosa th { color: var(--inchiostro-2); font-weight: 500; }

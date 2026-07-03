@@ -124,3 +124,14 @@ nel contesto se il comando non li riguarda. Nessuna telemetria.
   entita a grado <=1 e conteggio del report (etichettato come dato di report).
 - Percorsi Windows nel report (sync storica): il parser normalizza e usa solo basename quando serve.
 - Agent SDK usa l'autenticazione locale di Claude Code se presente, altrimenti ANTHROPIC_API_KEY.
+
+## Note post-costruzione (2026-07-03)
+
+- Su questo Mac non esiste un login CLI di Claude Code (solo l'app desktop): i comandi
+  all'agente richiedono il passo una-tantum descritto nel README (setup-token o API key).
+  Il pre-flight della console guida l'utente. Tutto il resto funziona senza credenziali.
+- graph.json corrente e l'export strutturale dello script di sync (388 nodi); gli edge
+  INFERRED del report non ci sono: le surprising connections vengono sintetizzate dalle
+  coppie del report collegando le occorrenze reali della stessa label nel vault.
+- Verificato: 1431 stelle reali a 61fps; quick capture end-to-end su vault reale con log
+  ingest e aggiornamento live via SSE; query graphify dalla UI.
