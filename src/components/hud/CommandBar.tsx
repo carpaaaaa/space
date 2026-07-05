@@ -91,10 +91,8 @@ export function CommandBar({
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
-    if (!testo.trim() || testo.startsWith("/")) {
-      setSuggerimenti([]);
-      return;
-    }
+    // in slash-mode la lista note non e renderizzata: inutile fetchare
+    if (!testo.trim() || testo.startsWith("/")) return;
     debounce.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?mode=local&q=${encodeURIComponent(testo)}`);

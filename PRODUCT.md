@@ -15,15 +15,20 @@ comandare un agente AI che scrive nelle note rispettando le regole del vault.
 - **Configurazione**: tutto cio che e personale vive in space.config.json e
   .env.local (gitignored). Il repo e un template pulito.
 - **Privacy**: tutto locale. L'AI viene chiamata solo per comandi espliciti
-  dell'agente; i pannelli non fanno mai rete esterna. Provider locale possibile.
+  dell'agente o per automazioni che l'utente ha attivato esplicitamente,
+  skill per skill; i pannelli non fanno mai rete esterna. Provider locale
+  possibile.
 
 ## Superfici
 
 1. **Galassia** (hero, brand moment): grafo reale del vault. Nucleo = orchestratore.
 2. **Pannelli operativi** (product, restrained): Obiettivi, Progetti, Finanze,
-   Inbox, Log, Ricerca, Aspetto.
-3. **Command bar agente**: streaming, selettore modello, conferme diff per le
-   azioni sensibili.
+   Inbox, Log, Ricerca, Skills, Aspetto.
+3. **Command bar agente**: streaming, selettore modello, comandi /slug dalle
+   skill del vault, conferme diff per le azioni sensibili.
+4. **Fucina**: le skill sono note del vault; la fucina (/forgia, e ogni
+   giorno alle 9) le propone leggendo obiettivi e pattern, l'utente le
+   attiva, lo scheduler le esegue (a orario o su eventi del vault).
 
 ## Divieti non negoziabili (anti-slop)
 

@@ -123,6 +123,25 @@ strumenti file-only dentro il vault (niente shell).
 - Il pulsante "Smista con l'agente" nel pannello Inbox lancia lo smistamento secondo le
   regole del vault.
 
+## Skills e automazioni
+
+Le skill sono note markdown in una cartella del vault (config `skills.cartella`,
+default `Skills/`): il frontmatter dice quando girano (`trigger: comando` con uno
+slug per la command bar, `ogni: "09:00"` o `"lun 09:00"` a orario, `evento:
+nuova-nota` + `dove: Inbox/` sugli eventi del vault), il corpo e il playbook che
+l'agente esegue.
+
+- **La fucina** (`/forgia`, e da sola ogni giorno alle 9): legge obiettivi, task,
+  inbox e log, e scrive nuove skill con `stato: proposta`. Le proposte sono
+  inerti: diventano operative solo quando le attivi tu (dal pannello Skills o
+  cambiando `stato: attiva` in Obsidian).
+- **Pannello Skills**: tutte le skill con stato, trigger, ultima esecuzione ed
+  esito; azioni attiva/pausa/esegui ora/apri.
+- **Run automatici**: girano con space aperto (recupero all'avvio se era chiuso),
+  senza conferme ma coi divieti duri intatti (mai fuori dal vault, mai
+  cancellazioni, mai `.obsidian`), massimo `skills.maxRunGiorno` al giorno
+  (default 20). `skills.fucinaPeriodica: false` spegne la proposta giornaliera.
+
 ## Ricerca
 
 - **Note**: ricerca locale su titoli, frontmatter e contenuto.
