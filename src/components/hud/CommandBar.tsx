@@ -11,6 +11,12 @@ interface Suggerimento {
   estratto: string;
 }
 
+interface SkillSlash {
+  comando: string;
+  nome: string;
+  motivazione?: string;
+}
+
 /**
  * La command bar del nucleo: cerca nel vault e vola alle stelle.
  * Dalla fase agente, il testo libero diventa un comando per Claude.
@@ -24,10 +30,12 @@ export function CommandBar({
 }) {
   const [testo, setTesto] = useState("");
   const [suggerimenti, setSuggerimenti] = useState<Suggerimento[]>([]);
+  const [skillsSlash, setSkillsSlash] = useState<SkillSlash[]>([]);
   const [attivo, setAttivo] = useState(-1);
   const [aperta, setAperta] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vaultVersion = useUI((s) => s.vaultVersion);
 
   const galassia = useUI((s) => s.galassia);
   const vola = useUI((s) => s.vola);
@@ -56,9 +64,37 @@ export function CommandBar({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // le skill del vault che rispondono a /slug (attive, trigger comando)
+  useEffect(() => {
+    if (!agentePronto) return;
+    let vivo = true;
+    fetch("/api/skills")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { skills?: Array<SkillSlash & { stato: string; trigger: string[] }> } | null) => {
+        if (!vivo || !d?.skills) return;
+        setSkillsSlash(
+          d.skills.filter(
+            (s) => s.stato === "attiva" && s.trigger.includes("comando") && s.comando
+          )
+        );
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [agentePronto, vaultVersion]);
+
+  const inSlash = testo.startsWith("/") && testo.length > 0;
+  const slashFiltrate = inSlash
+    ? skillsSlash.filter((s) => s.comando.startsWith(testo.slice(1).split(/\s/)[0]))
+    : [];
+
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
-    if (!testo.trim()) return;
+    if (!testo.trim() || testo.startsWith("/")) {
+      setSuggerimenti([]);
+      return;
+    }
     debounce.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?mode=local&q=${encodeURIComponent(testo)}`);
@@ -86,7 +122,28 @@ export function CommandBar({
     [galassia, apriNota, vola, setSelezione]
   );
 
+  const lanciaSkill = (slug: string) => {
+    if (!onComando) return;
+    // conserva l'eventuale argomento digitato dopo lo slug
+    const arg = testo.slice(1).split(/\s+/).slice(1).join(" ");
+    onComando("/" + slug + (arg ? " " + arg : ""));
+    setTesto("");
+    setAperta(false);
+    setAttivo(-1);
+  };
+
   const invia = () => {
+    if (inSlash) {
+      const scelta = attivo >= 0 ? slashFiltrate[attivo] : slashFiltrate[0];
+      if (scelta) {
+        lanciaSkill(scelta.comando);
+      } else if (agentePronto && onComando) {
+        onComando(testo.trim()); // slug libero: il server rispondera 404 se non esiste
+        setTesto("");
+        setAperta(false);
+      }
+      return;
+    }
     if (attivo >= 0 && suggerimenti[attivo]) {
       volaANota(suggerimenti[attivo]);
       return;
@@ -132,7 +189,8 @@ export function CommandBar({
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
-              setAttivo((a) => Math.min(a + 1, suggerimenti.length - 1));
+              const n = inSlash ? slashFiltrate.length : suggerimenti.length;
+              setAttivo((a) => Math.min(a + 1, n - 1));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
               setAttivo((a) => Math.max(a - 1, -1));
@@ -173,7 +231,39 @@ export function CommandBar({
         </kbd>
       </div>
 
-      {aperta && suggerimenti.length > 0 && (
+      {aperta && inSlash && slashFiltrate.length > 0 && (
+        <ul className="pannello-superficie mt-1.5 overflow-hidden py-1" role="listbox">
+          {slashFiltrate.map((s, i) => (
+            <li key={s.comando} role="option" aria-selected={i === attivo}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  lanciaSkill(s.comando);
+                }}
+                onMouseEnter={() => setAttivo(i)}
+                className="flex w-full items-baseline gap-2.5 px-4 py-2 text-left transition-colors duration-100"
+                style={{ background: i === attivo ? "var(--superficie-2)" : "transparent" }}
+              >
+                <span className="mono text-[12px]" style={{ color: "var(--oro-2)" }}>
+                  /{s.comando}
+                </span>
+                <span className="text-[13px] font-medium">{s.nome}</span>
+                {s.motivazione && (
+                  <span
+                    className="truncate text-[11.5px]"
+                    style={{ color: "var(--inchiostro-3)" }}
+                  >
+                    {s.motivazione}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {aperta && !inSlash && suggerimenti.length > 0 && (
         <ul className="pannello-superficie mt-1.5 overflow-hidden py-1" role="listbox">
           {suggerimenti.map((s, i) => (
             <li key={s.rel} role="option" aria-selected={i === attivo}>
