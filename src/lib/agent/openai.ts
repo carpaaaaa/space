@@ -129,7 +129,8 @@ async function esegui(
   nome: string,
   args: Record<string, unknown>,
   emit: Emit,
-  abort: AbortSignal
+  abort: AbortSignal,
+  unattended?: boolean
 ): Promise<string> {
   const snap = await getSnapshot();
 
@@ -182,7 +183,7 @@ async function esegui(
             new_string: String(args.nuovo ?? ""),
             replace_all: Boolean(args.tutte),
           };
-    const esito = await gateScrittura({ toolName, input, emit, abort });
+    const esito = await gateScrittura({ toolName, input, emit, abort, unattended });
     if (esito.rifiuto) return `RIFIUTATA: ${esito.rifiuto}`;
     const assoluto = dentroVault(esito.rel);
     if (!assoluto) return "ERRORE: percorso fuori dal vault";
@@ -199,6 +200,7 @@ export async function eseguiOpenAI(opts: {
   modello: ModelloAgente;
   emit: Emit;
   abort: AbortController;
+  unattended?: boolean;
 }): Promise<void> {
   const { emit, modello } = opts;
   const inizio = Date.now();
@@ -283,7 +285,13 @@ export async function eseguiOpenAI(opts: {
       }
       const descr = String(args.percorso ?? args.pattern ?? args.testo ?? "");
       emit({ t: "tool", nome: chiamata.function.name, descr });
-      const esito = await esegui(chiamata.function.name, args, emit, opts.abort.signal);
+      const esito = await esegui(
+        chiamata.function.name,
+        args,
+        emit,
+        opts.abort.signal,
+        opts.unattended
+      );
       messaggi.push({ role: "tool", tool_call_id: chiamata.id, content: esito });
     }
   }

@@ -215,6 +215,8 @@ export async function gateScrittura(opts: {
   input: Record<string, unknown>;
   emit: Emit;
   abort: AbortSignal;
+  /** run automatico senza utente: le regole ask passano, i deny restano */
+  unattended?: boolean;
 }): Promise<{ rifiuto: string | null; rel: string; esisteva: boolean; nuovo: string }> {
   const s = stato();
   const root = vaultPath();
@@ -252,7 +254,7 @@ export async function gateScrittura(opts: {
     return { rifiuto: regola.motivo, rel, esisteva, nuovo };
   }
 
-  if (regola.decisione === "ask") {
+  if (regola.decisione === "ask" && !opts.unattended) {
     const id = "perm_" + Math.random().toString(36).slice(2, 10);
     opts.emit({
       t: "permesso",
@@ -305,6 +307,8 @@ export function eseguiComando(opts: {
   comando: string;
   sessione?: string | null;
   modello?: string;
+  /** run automatico (scheduler/eventi): niente conferme, deny intatti */
+  unattended?: boolean;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const s = stato();
@@ -331,7 +335,13 @@ export function eseguiComando(opts: {
 
       try {
         if (modello.provider === "openai") {
-          await eseguiOpenAI({ comando: opts.comando, modello, emit, abort });
+          await eseguiOpenAI({
+            comando: opts.comando,
+            modello,
+            emit,
+            abort,
+            unattended: opts.unattended,
+          });
         } else {
           if (!(await credenzialiClaude())) {
             emit({ t: "errore", messaggio: MESSAGGIO_SETUP });
@@ -343,6 +353,7 @@ export function eseguiComando(opts: {
             modelloId: modello.id,
             emit,
             abort,
+            unattended: opts.unattended,
           });
         }
       } catch (err) {
@@ -380,6 +391,7 @@ async function eseguiClaude(opts: {
   modelloId: string;
   emit: Emit;
   abort: AbortController;
+  unattended?: boolean;
 }): Promise<void> {
   const s = stato();
   const sistema = await systemPromptAgente();
@@ -420,6 +432,7 @@ async function eseguiClaude(opts: {
           input,
           emit,
           abort: opts.abort.signal,
+          unattended: opts.unattended,
         });
         if (esito.rifiuto) {
           return { behavior: "deny", message: esito.rifiuto } as PermissionResult;
