@@ -10,6 +10,7 @@ const VOCI: { key: Pannello; label: string }[] = [
   { key: "inbox", label: "Inbox" },
   { key: "log", label: "Log" },
   { key: "ricerca", label: "Cerca" },
+  { key: "skills", label: "Skills" },
   { key: "aspetto", label: "Aspetto" },
 ];
 

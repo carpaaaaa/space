@@ -15,6 +15,7 @@ export type Pannello =
   | "inbox"
   | "log"
   | "ricerca"
+  | "skills"
   | "aspetto"
   | "comando";
 
