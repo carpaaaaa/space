@@ -54,6 +54,14 @@ export interface SpaceConfig {
     modelli: ModelloAgente[];
   };
   graphify: { graphJson: string; report: string };
+  skills: {
+    /** cartella delle note-skill, relativa al vault */
+    cartella: string;
+    /** tetto dei run automatici al giorno (i run manuali non contano) */
+    maxRunGiorno: number;
+    /** false = la fucina propone solo su comando, mai da sola */
+    fucinaPeriodica: boolean;
+  };
 }
 
 const CONFIG_DEFAULT: SpaceConfig = {
@@ -74,6 +82,7 @@ const CONFIG_DEFAULT: SpaceConfig = {
     graphJson: "08_AI/graphify/output/current/graph.json",
     report: "08_AI/graphify/output/current/GRAPH_REPORT.md",
   },
+  skills: { cartella: "Skills", maxRunGiorno: 20, fucinaPeriodica: true },
 };
 
 /** Cartelle mai indicizzate, oltre a quelle in config. */
@@ -149,6 +158,7 @@ function leggiConfig(): SpaceConfig {
           : CONFIG_DEFAULT.agente.modelli,
       },
       graphify: { ...CONFIG_DEFAULT.graphify, ...utente.graphify },
+      skills: { ...CONFIG_DEFAULT.skills, ...utente.skills },
     };
   } catch {
     return CONFIG_DEFAULT;
@@ -295,6 +305,15 @@ export function graphReportPath(): string {
 
 export function modelliAgente(): ModelloAgente[] {
   return spaceConfig().agente.modelli;
+}
+
+export function skillsConfig(): SpaceConfig["skills"] {
+  return spaceConfig().skills;
+}
+
+/** Cartella delle note-skill, assoluta. */
+export function skillsDir(): string {
+  return path.join(vaultPath(), spaceConfig().skills.cartella);
 }
 
 export function fileProtetti(): Set<string> {

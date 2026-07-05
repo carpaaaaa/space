@@ -46,5 +46,12 @@
   "graphify": {
     "graphJson": "graphify/graph.json",
     "report": "graphify/GRAPH_REPORT.md"
+  },
+
+  "$commento_skills": "Le skill sono note markdown in questa cartella del vault: la fucina (/forgia) le propone, tu le attivi, lo scheduler le esegue. maxRunGiorno limita i run automatici; fucinaPeriodica: false spegne la proposta giornaliera delle 9.",
+  "skills": {
+    "cartella": "Skills",
+    "maxRunGiorno": 20,
+    "fucinaPeriodica": true
   }
 }
