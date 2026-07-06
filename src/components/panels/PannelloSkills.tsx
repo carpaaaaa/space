@@ -30,12 +30,21 @@ interface SkillRiga {
 /** Risultato di una skill: la nota che mantiene, resa inline nel pannello. */
 function RisultatoSkill({ rel }: { rel: string }) {
   const vaultVersion = useUI((s) => s.vaultVersion);
+  const chiave = `${rel}:${vaultVersion}`;
+  const [chiavePrecedente, setChiavePrecedente] = useState(chiave);
   const [html, setHtml] = useState<string | null>(null);
   const [stato, setStato] = useState<"carico" | "vuoto" | "pronto" | "errore">("carico");
 
+  // reset a "carico" ad ogni cambio di rel/vaultVersion: fatto durante il
+  // render (non nell'effetto) per non violare react-hooks/set-state-in-effect
+  if (chiave !== chiavePrecedente) {
+    setChiavePrecedente(chiave);
+    setStato("carico");
+    setHtml(null);
+  }
+
   useEffect(() => {
     let vivo = true;
-    setStato("carico");
     fetch(`/api/note?rel=${encodeURIComponent(rel)}`)
       .then(async (r) => {
         if (r.status === 404) return { _vuoto: true };
@@ -117,10 +126,26 @@ function descriviTrigger(s: SkillRiga): string {
 export function PannelloSkills() {
   const { dati, errore, caricamento } = useVaultJson<RispostaSkills>("/api/skills");
   const apriNota = useUI((s) => s.apriNota);
+  const setSkillInFuoco = useUI((s) => s.setSkillInFuoco);
   // rel -> feedback transitorio dopo un'azione ("in coda", "salvata")
   const [feedback, setFeedback] = useState<Record<string, string>>({});
-  // accordion: un solo risultato aperto alla volta (null = nessuno)
+  // accordion: un solo risultato aperto alla volta (null = nessuno). Il
+  // risultato aperto e' anche cio' su cui la command bar da' contesto
+  // all'agente ("rimuovi queste task" si riferisce a questo).
   const [apertoRel, setApertoRel] = useState<string | null>(null);
+
+  const apriRisultato = (s: SkillRiga) => {
+    if (apertoRel === s.rel) {
+      setApertoRel(null);
+      setSkillInFuoco(null);
+    } else {
+      setApertoRel(s.rel);
+      setSkillInFuoco(s.output ? { rel: s.rel, nome: s.nome, output: s.output } : null);
+    }
+  };
+
+  // lasciando il pannello, la command bar torna generica
+  useEffect(() => () => setSkillInFuoco(null), [setSkillInFuoco]);
 
   const azione = async (rel: string, corpo: Record<string, string>, nota: string) => {
     try {
@@ -258,7 +283,7 @@ export function PannelloSkills() {
                     type="button"
                     className="bottone-secondario text-[12px]"
                     aria-expanded={apertoRel === s.rel}
-                    onClick={() => setApertoRel((r) => (r === s.rel ? null : s.rel))}
+                    onClick={() => apriRisultato(s)}
                   >
                     {apertoRel === s.rel ? "Nascondi risultato" : "Risultato"}
                   </button>

@@ -75,6 +75,13 @@ export interface Filtri {
   etichette: boolean;
 }
 
+/** la skill il cui risultato e' aperto nel pannello Skills: da' contesto alla command bar. */
+export interface SkillInFuoco {
+  rel: string;
+  nome: string;
+  output: string;
+}
+
 export interface VolaA {
   /** indice stella (o null per tornare a casa) */
   idx: number | null;
@@ -124,6 +131,10 @@ interface UIState {
   aspetto: Aspetto;
   aspettoVersione: number;
   setAspetto: (a: Partial<Aspetto>) => void;
+
+  /** skill il cui risultato e' aperto nel pannello Skills (null = nessuna) */
+  skillInFuoco: SkillInFuoco | null;
+  setSkillInFuoco: (s: SkillInFuoco | null) => void;
 
   /** console dell'agente */
   consoleAperta: boolean;
@@ -213,6 +224,9 @@ export const useUI = create<UIState>((set) => ({
       salvaLocale("space.aspetto", aspetto);
       return { aspetto, aspettoVersione: s.aspettoVersione + 1 };
     }),
+
+  skillInFuoco: null,
+  setSkillInFuoco: (s) => set({ skillInFuoco: s }),
 
   consoleAperta: false,
   agenteInEsecuzione: false,

@@ -47,6 +47,8 @@ export function CommandBar({
   const modelli = useUI((s) => s.modelli);
   const modelloScelto = useUI((s) => s.modelloScelto);
   const setModelloScelto = useUI((s) => s.setModelloScelto);
+  const skillInFuoco = useUI((s) => s.skillInFuoco);
+  const setSkillInFuoco = useUI((s) => s.setSkillInFuoco);
 
   // scorciatoia globale: premi / o cmd+k per cercare
   useEffect(() => {
@@ -133,6 +135,15 @@ export function CommandBar({
     setAttivo(-1);
   };
 
+  // con una skill in fuoco (risultato aperto in Skills), l'istruzione libera
+  // si riferisce a quel risultato: l'agente deve saperlo per capire "queste".
+  const conContesto = (t: string) =>
+    skillInFuoco
+      ? `Stai agendo sul risultato della skill "${skillInFuoco.nome}" (${skillInFuoco.rel}). ` +
+        `Il suo output piu recente e' in ${skillInFuoco.output} (la sezione piu in alto e' la ` +
+        `piu recente). Istruzione dell'utente su questo risultato: ${t}`
+      : t;
+
   const invia = () => {
     if (inSlash) {
       const scelta = attivo >= 0 ? slashFiltrate[attivo] : slashFiltrate[0];
@@ -152,7 +163,7 @@ export function CommandBar({
     const t = testo.trim();
     if (!t) return;
     if (agentePronto && onComando) {
-      onComando(t);
+      onComando(conContesto(t));
       setTesto("");
       setSuggerimenti([]);
       setAperta(false);
@@ -207,9 +218,11 @@ export function CommandBar({
             }
           }}
           placeholder={
-            agentePronto
-              ? "Cerca una stella o dai un comando all'agente…"
-              : "Cerca nel vault… (/)"
+            skillInFuoco && !inSlash
+              ? `Istruzione su "${skillInFuoco.nome}"…`
+              : agentePronto
+                ? "Cerca una stella o dai un comando all'agente…"
+                : "Cerca nel vault… (/)"
           }
           aria-label="Barra comandi"
           className="h-11 w-full bg-transparent text-[14px] outline-none placeholder:text-[color:var(--inchiostro-3)]"
@@ -237,6 +250,25 @@ export function CommandBar({
           ⌘K
         </kbd>
       </div>
+
+      {inBasso && skillInFuoco && (
+        <div
+          className="chip-area self-start"
+          style={{ ["--c" as never]: "var(--oro-2)" }}
+          title="Le istruzioni si riferiscono a questo risultato"
+        >
+          <i aria-hidden />
+          <span className="truncate">{skillInFuoco.nome}</span>
+          <button
+            type="button"
+            onClick={() => setSkillInFuoco(null)}
+            aria-label="Smetti di riferirti a questo risultato"
+            className="ml-0.5 opacity-70 hover:opacity-100"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {aperta && inSlash && slashFiltrate.length > 0 && (
         <ul className="pannello-superficie overflow-hidden py-1" role="listbox">
