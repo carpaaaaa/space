@@ -1,24 +1,25 @@
 /**
- * La nota-skill di sistema "Fucina": viene copiata nella cartella skills
- * del vault al primo avvio, se manca. Da li in poi appartiene all'utente,
- * che puo modificarla come qualsiasi altra nota.
+ * La nota-skill di sistema "Osservatorio": viene copiata nella cartella
+ * skills del vault al primo avvio, se manca. Da li in poi appartiene
+ * all'utente, che puo modificarla come qualsiasi altra nota.
  */
 
-export const NOME_FILE_FUCINA = "Fucina.md";
-export const SLUG_FUCINA = "forgia";
+export const NOME_FILE_FUCINA = "Osservatorio.md";
+export const SLUG_FUCINA = "osserva";
 
 export const FUCINA_DEFAULT = `---
 tipo: skill
 stato: attiva
 trigger: [comando, ogni]
-comando: forgia
+comando: osserva
 ogni: "09:00"
-motivazione: Skill di sistema di space, la fucina che propone le altre.
+motivazione: Skill di sistema di space, osserva la galassia del vault e propone le altre.
 ---
 
 ## Obiettivo
 
-Analizza il vault e proponi skill utili, senza mai attivarle da solo.
+Osserva la galassia del vault e proponi skill utili, senza mai attivarle
+da solo.
 
 ## Passi
 

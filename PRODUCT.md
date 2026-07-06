@@ -26,9 +26,9 @@ comandare un agente AI che scrive nelle note rispettando le regole del vault.
    Inbox, Log, Ricerca, Skills, Aspetto.
 3. **Command bar agente**: streaming, selettore modello, comandi /slug dalle
    skill del vault, conferme diff per le azioni sensibili.
-4. **Fucina**: le skill sono note del vault; la fucina (/forgia, e ogni
-   giorno alle 9) le propone leggendo obiettivi e pattern, l'utente le
-   attiva, lo scheduler le esegue (a orario o su eventi del vault).
+4. **Osservatorio**: le skill sono note del vault; l'osservatorio (/osserva,
+   e ogni giorno alle 9) le propone leggendo obiettivi e pattern, l'utente
+   le attiva, lo scheduler le esegue (a orario o su eventi del vault).
 
 ## Divieti non negoziabili (anti-slop)
 

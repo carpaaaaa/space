@@ -101,8 +101,8 @@ export function PannelloSkills() {
 
       {dati && skills.length === 0 && (
         <VuotoCaldo>
-          Nessuna skill ancora. Lancia /forgia dalla barra comandi: la fucina legge il
-          vault e ti propone le prime.
+          Nessuna skill ancora. Lancia /osserva dalla barra comandi: l&apos;osservatorio
+          legge il vault e ti propone le prime.
         </VuotoCaldo>
       )}
 

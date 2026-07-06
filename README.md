@@ -131,8 +131,8 @@ slug per la command bar, `ogni: "09:00"` o `"lun 09:00"` a orario, `evento:
 nuova-nota` + `dove: Inbox/` sugli eventi del vault), il corpo e il playbook che
 l'agente esegue.
 
-- **La fucina** (`/forgia`, e da sola ogni giorno alle 9): legge obiettivi, task,
-  inbox e log, e scrive nuove skill con `stato: proposta`. Le proposte sono
+- **L'osservatorio** (`/osserva`, e da solo ogni giorno alle 9): legge obiettivi,
+  task, inbox e log, e scrive nuove skill con `stato: proposta`. Le proposte sono
   inerti: diventano operative solo quando le attivi tu (dal pannello Skills o
   cambiando `stato: attiva` in Obsidian).
 - **Pannello Skills**: tutte le skill con stato, trigger, ultima esecuzione ed
