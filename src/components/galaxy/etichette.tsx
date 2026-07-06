@@ -225,9 +225,11 @@ export function EtichetteOverlay({
             }}
             className="pointer-events-auto block translate-x-2 -translate-y-1/2 cursor-pointer text-left"
             style={{
-              color: e.god ? "var(--oro)" : "var(--inchiostro-2)",
+              // il nome porta il colore della sua area (e.colore); i god node
+              // restano oro come accento di importanza
+              color: e.god ? "var(--oro)" : e.colore,
               fontSize: e.god ? 13 : 11.5,
-              fontWeight: e.god ? 600 : 400,
+              fontWeight: e.god ? 600 : 500,
               textShadow: "0 1px 10px rgba(0,0,0,.95)",
               maxWidth: 240,
               overflow: "hidden",
