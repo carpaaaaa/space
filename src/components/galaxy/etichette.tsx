@@ -13,6 +13,13 @@ export type MappaEtichette = Map<string, HTMLDivElement>;
 const M_TEMP = new THREE.Matrix4();
 const V_TEMP = new THREE.Vector3();
 
+// fade per distanza dalla camera delle etichette nota (non god): piena entro
+// DIST_VICINO, spenta oltre DIST_LONTANO. Tarate sulla distanza tipica di un
+// fly-to (10 + size*3.5, vedi camera.tsx) cosi il vicinato si accende quando
+// ti avvicini a un cluster, senza affollare la vista d'insieme.
+const DIST_VICINO = 26;
+const DIST_LONTANO = 68;
+
 /**
  * Dentro il canvas: proietta le posizioni 3D e muove direttamente i div
  * delle etichette (niente setState per frame).
@@ -52,9 +59,21 @@ export function PonteEtichette({
         x = g.pos[i * 3];
         y = g.pos[i * 3 + 1];
         z = g.pos[i * 3 + 2];
-        // le etichette fisse (god node + note grandi) restano sempre visibili;
-        // spariscono solo se la stella e filtrata via o finisce fuori schermo.
-        if (g.vis[i] > 0) opacita = (g.flag[i] & F_GOD) !== 0 ? 1 : 0.85;
+        // i god node restano sempre visibili; le altre note (ora TUTTE hanno
+        // un'etichetta) emergono avvicinandosi, come le micro-stelle sezione:
+        // altrimenti centinaia di nomi si accavallano in un blob illeggibile.
+        if (g.vis[i] > 0) {
+          if (g.flag[i] & F_GOD) {
+            opacita = 1;
+          } else {
+            const dx = x - camera.position.x;
+            const dy = y - camera.position.y;
+            const dz = z - camera.position.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const t = THREE.MathUtils.clamp((DIST_LONTANO - dist) / (DIST_LONTANO - DIST_VICINO), 0, 1);
+            opacita = 0.85 * t;
+          }
+        }
       }
       V_TEMP.set(x, y, z).applyMatrix4(M_TEMP);
       if (V_TEMP.z < -1 || V_TEMP.z > 1) opacita = 0; // dietro o fuori dalla camera
