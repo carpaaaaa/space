@@ -65,7 +65,11 @@ export function AppShell() {
       )}
 
       <NavRail />
-      <CommandBar agentePronto onComando={(testo) => inviaComando(testo)} />
+      <CommandBar
+        agentePronto
+        onComando={(testo) => inviaComando(testo)}
+        posizione={pannello === "skills" ? "basso-destra" : "alto"}
+      />
       {pannello === "galassia" && <FiltriGalassia />}
       {pannello !== "galassia" && (
         <Pannelli agentePronto onSmista={() => inviaComando(COMANDO_SMISTA)} />

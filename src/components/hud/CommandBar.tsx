@@ -24,9 +24,12 @@ interface SkillSlash {
 export function CommandBar({
   onComando,
   agentePronto = false,
+  posizione = "alto",
 }: {
   onComando?: (testo: string) => void;
   agentePronto?: boolean;
+  /** "alto" = centrata in cima (galassia); "basso-destra" = ancorata all'angolo */
+  posizione?: "alto" | "basso-destra";
 }) {
   const [testo, setTesto] = useState("");
   const [suggerimenti, setSuggerimenti] = useState<Suggerimento[]>([]);
@@ -158,9 +161,15 @@ export function CommandBar({
     }
   };
 
+  const inBasso = posizione === "basso-destra";
+
   return (
     <div
-      className="absolute left-1/2 top-5 w-[min(560px,86vw)] -translate-x-1/2"
+      className={
+        inBasso
+          ? "absolute bottom-5 right-5 flex w-[min(420px,92vw)] flex-col-reverse gap-1.5 max-md:bottom-[76px] max-md:right-3"
+          : "absolute left-1/2 top-5 flex w-[min(560px,86vw)] -translate-x-1/2 flex-col gap-1.5"
+      }
       style={{ zIndex: "var(--z-hud)" }}
     >
       <div
@@ -230,7 +239,7 @@ export function CommandBar({
       </div>
 
       {aperta && inSlash && slashFiltrate.length > 0 && (
-        <ul className="pannello-superficie mt-1.5 overflow-hidden py-1" role="listbox">
+        <ul className="pannello-superficie overflow-hidden py-1" role="listbox">
           {slashFiltrate.map((s, i) => (
             <li key={s.comando} role="option" aria-selected={i === attivo}>
               <button
@@ -262,7 +271,7 @@ export function CommandBar({
       )}
 
       {aperta && !inSlash && suggerimenti.length > 0 && (
-        <ul className="pannello-superficie mt-1.5 overflow-hidden py-1" role="listbox">
+        <ul className="pannello-superficie overflow-hidden py-1" role="listbox">
           {suggerimenti.map((s, i) => (
             <li key={s.rel} role="option" aria-selected={i === attivo}>
               <button

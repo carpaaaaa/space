@@ -317,6 +317,9 @@ export function PannelloSkills() {
           {dati.runner.inEsecuzione ? " · una skill in esecuzione" : ""}
         </p>
       )}
+
+      {/* spazio per non restare sotto la command bar ancorata in basso a destra */}
+      <div className="h-20" aria-hidden />
     </div>
   );
 }
