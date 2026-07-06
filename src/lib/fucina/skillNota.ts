@@ -22,6 +22,8 @@ export interface SkillDef {
   dove?: string;
   /** nota del vault che la skill mantiene: Space la mostra inline nel pannello */
   output?: string;
+  /** una riga "cosa fa": sempre mostrata nel pannello, per tutte le skill */
+  descrizione?: string;
   motivazione?: string;
   /** "YYYY-MM-DD HH:MM", scritta dal runtime */
   ultimaEsecuzione?: string;
@@ -66,6 +68,10 @@ export function parseSkillNota(
   const dove = fm.dove != null ? String(fm.dove) : undefined;
   const output =
     fm.output != null && String(fm.output).trim() ? String(fm.output).trim() : undefined;
+  const descrizione =
+    fm.descrizione != null && String(fm.descrizione).trim()
+      ? String(fm.descrizione).trim()
+      : undefined;
   if (trigger.includes("comando")) {
     if (!comando || !/^[a-z0-9][a-z0-9-]*$/.test(comando)) {
       return scarta("trigger `comando` richiede uno slug (minuscole e trattini)");
@@ -95,6 +101,7 @@ export function parseSkillNota(
       evento: trigger.includes("evento") ? "nuova-nota" : undefined,
       dove,
       output,
+      descrizione,
       motivazione: fm.motivazione != null ? String(fm.motivazione) : undefined,
       ultimaEsecuzione:
         fm["ultima-esecuzione"] != null ? String(fm["ultima-esecuzione"]) : undefined,

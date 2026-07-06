@@ -5,9 +5,10 @@ import {
   eseguiComando,
   type EventoAgente,
 } from "@/lib/agent/sessione";
-import { skillsConfig, vaultPath } from "@/lib/vault/config";
-import { conEsito, type SkillDef } from "./skillNota";
+import { skillsConfig, skillsDir, vaultPath } from "@/lib/vault/config";
+import { conEsito, conStato, parseSkillNota, type SkillDef } from "./skillNota";
 import { adessoStr } from "./scadenze";
+import { SLUG_FUCINA } from "./fucinaSkillDefault";
 
 /**
  * Esegue le skill senza utente davanti: coda FIFO, un run alla volta,
@@ -106,6 +107,71 @@ export function accodaRun(skill: SkillDef, origine: OrigineRun): EsitoAccoda {
   return { accodato: true, motivo: s.inEsecuzione ? "in coda" : "in esecuzione" };
 }
 
+async function mtimeSkills(): Promise<Map<string, number>> {
+  const dir = skillsDir();
+  const mappa = new Map<string, number>();
+  try {
+    const files = (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
+    for (const f of files) {
+      try {
+        mappa.set(f, (await fs.stat(path.join(dir, f))).mtimeMs);
+      } catch {
+        // sparito tra readdir e stat: ignora
+      }
+    }
+  } catch {
+    // cartella assente
+  }
+  return mappa;
+}
+
+/**
+ * Rete di sicurezza indipendente dal modello: l'osservatorio puo' SOLO
+ * proporre. Qualsiasi nota nuova o modificata nella cartella skills durante
+ * il suo run (tranne la sua stessa nota) che non abbia stato "proposta"
+ * viene forzata a "proposta". Cosi', anche se il modello sbaglia scrivendo
+ * un altro stato, nessuna automazione parte senza approvazione esplicita.
+ */
+async function blindaProposteOsservatorio(
+  prima: Map<string, number>,
+  relOsservatorio: string
+): Promise<void> {
+  const dir = skillsDir();
+  const root = vaultPath();
+  let files: string[] = [];
+  try {
+    files = (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
+  } catch {
+    return;
+  }
+  for (const f of files) {
+    const assoluto = path.join(dir, f);
+    const rel = path.relative(root, assoluto).split(path.sep).join("/");
+    if (rel === relOsservatorio) continue;
+    let mtime: number;
+    try {
+      mtime = (await fs.stat(assoluto)).mtimeMs;
+    } catch {
+      continue;
+    }
+    const mtimePrima = prima.get(f);
+    if (mtimePrima != null && mtime <= mtimePrima) continue; // non toccata in questo run
+    try {
+      const raw = await fs.readFile(assoluto, "utf8");
+      const parsed = parseSkillNota(raw, rel);
+      if (parsed.skill && parsed.skill.stato !== "proposta") {
+        await fs.writeFile(assoluto, conStato(raw, "proposta"), "utf8");
+        console.warn(
+          `[fucina] "${parsed.skill.nome}" creata/modificata dall'osservatorio con stato ` +
+            `"${parsed.skill.stato}": forzata a "proposta" (l'osservatorio non attiva mai da solo)`
+        );
+      }
+    } catch (e) {
+      console.error(`[fucina] blindatura fallita su ${rel}:`, e);
+    }
+  }
+}
+
 async function scriviEsito(rel: string, esito: "ok" | "errore"): Promise<void> {
   const assoluto = path.join(vaultPath(), rel);
   try {
@@ -122,6 +188,9 @@ async function eseguiUno(run: RunInCoda): Promise<void> {
   s.inEsecuzione = run.skill.rel;
   s.runOggi += 1;
   console.log(`[fucina] run ${run.origine}: ${run.skill.nome}`);
+  // l'osservatorio puo' creare skill: fotografia "prima" per la blindatura
+  const eOsservatorio = run.skill.comando === SLUG_FUCINA;
+  const mtimePrima = eOsservatorio ? await mtimeSkills() : null;
   let ok = false;
   try {
     const prompt =
@@ -154,6 +223,9 @@ async function eseguiUno(run: RunInCoda): Promise<void> {
     console.error(`[fucina] run fallito ${run.skill.nome}:`, e);
     ok = false;
   } finally {
+    if (eOsservatorio && mtimePrima) {
+      await blindaProposteOsservatorio(mtimePrima, run.skill.rel);
+    }
     await scriviEsito(run.skill.rel, ok ? "ok" : "errore");
     s.inEsecuzione = null;
     console.log(`[fucina] fine ${run.skill.nome}: ${ok ? "ok" : "errore"}`);

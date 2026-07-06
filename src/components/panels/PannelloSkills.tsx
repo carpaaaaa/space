@@ -20,6 +20,7 @@ interface SkillRiga {
   evento?: string;
   dove?: string;
   output?: string;
+  descrizione?: string;
   motivazione?: string;
   ultimaEsecuzione?: string;
   esito?: "ok" | "errore";
@@ -118,6 +119,8 @@ export function PannelloSkills() {
   const apriNota = useUI((s) => s.apriNota);
   // rel -> feedback transitorio dopo un'azione ("in coda", "salvata")
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+  // accordion: un solo risultato aperto alla volta (null = nessuno)
+  const [apertoRel, setApertoRel] = useState<string | null>(null);
 
   const azione = async (rel: string, corpo: Record<string, string>, nota: string) => {
     try {
@@ -140,11 +143,7 @@ export function PannelloSkills() {
     setTimeout(() => setFeedback((f) => ({ ...f, [rel]: "" })), 5000);
   };
 
-  const esegui = (s: SkillRiga) => {
-    // il risultato per le skill con output e' sempre visibile qui sotto:
-    // si popola da solo appena il run finisce.
-    azione(s.rel, { azione: "esegui" }, "in esecuzione");
-  };
+  const esegui = (s: SkillRiga) => azione(s.rel, { azione: "esegui" }, "in esecuzione");
 
   const skills = [...(dati?.skills ?? [])].sort(
     (a, b) => ORDINE_STATO[a.stato] - ORDINE_STATO[b.stato] || a.nome.localeCompare(b.nome)
@@ -217,9 +216,14 @@ export function PannelloSkills() {
                 )}
               </div>
 
-              {(proposta || s.esito === "errore") && s.motivazione && (
-                <p className="mt-1.5 text-[12.5px]" style={{ color: "var(--inchiostro-2)" }}>
-                  {s.motivazione}
+              {s.descrizione && (
+                <p className="mt-1.5 text-[12.5px]" style={{ color: "var(--inchiostro)" }}>
+                  {s.descrizione}
+                </p>
+              )}
+              {proposta && s.motivazione && (
+                <p className="mt-1 text-[12px]" style={{ color: "var(--inchiostro-3)" }}>
+                  Perché te la propongo: {s.motivazione}
                 </p>
               )}
 
@@ -249,6 +253,16 @@ export function PannelloSkills() {
                 >
                   Esegui ora
                 </button>
+                {s.output && (
+                  <button
+                    type="button"
+                    className="bottone-secondario text-[12px]"
+                    aria-expanded={apertoRel === s.rel}
+                    onClick={() => setApertoRel((r) => (r === s.rel ? null : s.rel))}
+                  >
+                    {apertoRel === s.rel ? "Nascondi risultato" : "Risultato"}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="bottone-secondario text-[12px]"
@@ -263,14 +277,8 @@ export function PannelloSkills() {
                 )}
               </div>
 
-              {s.output && (
+              {s.output && apertoRel === s.rel && (
                 <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--linea)" }}>
-                  <p
-                    className="mb-2 text-[11.5px] font-semibold"
-                    style={{ color: "var(--inchiostro-2)" }}
-                  >
-                    Risultato
-                  </p>
                   <RisultatoSkill rel={s.output} />
                 </div>
               )}

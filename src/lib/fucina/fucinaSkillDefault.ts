@@ -13,6 +13,7 @@ stato: attiva
 trigger: [comando, ogni]
 comando: osserva
 ogni: "09:00"
+descrizione: Legge il vault e propone nuove skill quando nota qualcosa di ripetitivo o fermo.
 motivazione: Skill di sistema di space, osserva la galassia del vault e propone le altre.
 ---
 
@@ -30,10 +31,19 @@ da solo.
    log recenti).
 3. Per ogni segnale forte (massimo 3), scrivi una nota-skill nella stessa
    cartella di questa nota, nello stesso formato, con:
-   - \`tipo: skill\` e \`stato: proposta\` (SEMPRE proposta: mai attiva, mai pausa)
+   - \`tipo: skill\` e \`stato: proposta\` (SEMPRE proposta: mai attiva, mai
+     pausa; anche se scrivi altro, space forza comunque proposta)
    - \`trigger\` adatto: \`comando\` con uno slug breve (minuscole e trattini),
      oppure anche \`ogni: "HH:MM"\` / \`evento: nuova-nota\` + \`dove: Cartella/\`
      se ha senso che giri da sola una volta approvata
+   - \`descrizione:\` UNA riga, presente tempo, che dice cosa fa la skill
+     quando gira (es. "Scrive un cruscotto di come sta andando il mese").
+     Diversa dalla motivazione: la motivazione spiega perche' la proponi,
+     la descrizione spiega cosa fa. Sempre in prima persona neutra, mai
+     "questa skill...".
+   - \`output: Cartella/Nome.md\` SOLO se la skill mantiene un'unica nota di
+     sintesi che ha senso mostrare come risultato (non per skill che
+     scrivono su note sparse o esistenti)
    - \`motivazione:\` una riga onesta che spiega il segnale osservato
    - un playbook chiaro nel corpo: obiettivo, passi, vincoli, output atteso
 4. Se una skill esistente andrebbe ritoccata, NON modificarla: scrivi la

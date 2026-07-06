@@ -65,6 +65,15 @@ test("campo output opzionale letto dal frontmatter", () => {
   assert.equal(parseSkillNota(VALIDA, "a.md").skill?.output, undefined);
 });
 
+test("campo descrizione opzionale letto dal frontmatter", () => {
+  const conDescr = VALIDA.replace(
+    "motivazione: prova",
+    "descrizione: Fa la cosa quando gira.\nmotivazione: prova"
+  );
+  assert.equal(parseSkillNota(conDescr, "a.md").skill?.descrizione, "Fa la cosa quando gira.");
+  assert.equal(parseSkillNota(VALIDA, "a.md").skill?.descrizione, undefined);
+});
+
 test("campi runtime letti dal frontmatter", () => {
   const s = `---\ntipo: skill\nstato: attiva\ntrigger: comando\ncomando: a\nultima-esecuzione: "2026-07-04 09:01"\nesito: errore\n---\nx`;
   const r = parseSkillNota(s, "a.md");
