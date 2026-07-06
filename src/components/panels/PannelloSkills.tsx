@@ -57,29 +57,29 @@ function RisultatoSkill({ rel }: { rel: string }) {
 
   if (stato === "carico") {
     return (
-      <p className="mt-3 text-[12.5px]" style={{ color: "var(--inchiostro-3)" }}>
+      <p className="text-[12.5px]" style={{ color: "var(--inchiostro-3)" }}>
         Leggo il risultato
       </p>
     );
   }
   if (stato === "vuoto") {
     return (
-      <p className="mt-3 text-[12.5px]" style={{ color: "var(--inchiostro-2)" }}>
-        Ancora nessun risultato. Premi &quot;Esegui ora&quot; per generarlo.
+      <p className="text-[12.5px]" style={{ color: "var(--inchiostro-2)" }}>
+        Non ancora generato. Premi &quot;Esegui ora&quot; qui sopra: appena finisce,
+        compare qui.
       </p>
     );
   }
   if (stato === "errore") {
     return (
-      <p className="mt-3 text-[12.5px]" style={{ color: "var(--errore)" }}>
+      <p className="text-[12.5px]" style={{ color: "var(--errore)" }}>
         Non riesco a leggere {rel}.
       </p>
     );
   }
   return (
     <article
-      className="prosa mt-3 border-t pt-3 text-[13.5px]"
-      style={{ borderColor: "var(--linea)" }}
+      className="prosa max-h-[340px] overflow-y-auto text-[13.5px]"
       dangerouslySetInnerHTML={{ __html: html ?? "" }}
     />
   );
@@ -118,8 +118,6 @@ export function PannelloSkills() {
   const apriNota = useUI((s) => s.apriNota);
   // rel -> feedback transitorio dopo un'azione ("in coda", "salvata")
   const [feedback, setFeedback] = useState<Record<string, string>>({});
-  // rel -> risultato aperto inline
-  const [aperto, setAperto] = useState<Record<string, boolean>>({});
 
   const azione = async (rel: string, corpo: Record<string, string>, nota: string) => {
     try {
@@ -143,9 +141,9 @@ export function PannelloSkills() {
   };
 
   const esegui = (s: SkillRiga) => {
+    // il risultato per le skill con output e' sempre visibile qui sotto:
+    // si popola da solo appena il run finisce.
     azione(s.rel, { azione: "esegui" }, "in esecuzione");
-    // apri subito il risultato: cosi lo vedi popolarsi appena il run finisce
-    if (s.output) setAperto((a) => ({ ...a, [s.rel]: true }));
   };
 
   const skills = [...(dati?.skills ?? [])].sort(
@@ -251,16 +249,6 @@ export function PannelloSkills() {
                 >
                   Esegui ora
                 </button>
-                {s.output && (
-                  <button
-                    type="button"
-                    className="bottone-secondario text-[12px]"
-                    aria-expanded={!!aperto[s.rel]}
-                    onClick={() => setAperto((a) => ({ ...a, [s.rel]: !a[s.rel] }))}
-                  >
-                    {aperto[s.rel] ? "Nascondi risultato" : "Risultato"}
-                  </button>
-                )}
                 <button
                   type="button"
                   className="bottone-secondario text-[12px]"
@@ -275,7 +263,17 @@ export function PannelloSkills() {
                 )}
               </div>
 
-              {s.output && aperto[s.rel] && <RisultatoSkill rel={s.output} />}
+              {s.output && (
+                <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--linea)" }}>
+                  <p
+                    className="mb-2 text-[11.5px] font-semibold"
+                    style={{ color: "var(--inchiostro-2)" }}
+                  >
+                    Risultato
+                  </p>
+                  <RisultatoSkill rel={s.output} />
+                </div>
+              )}
             </li>
           );
         })}
