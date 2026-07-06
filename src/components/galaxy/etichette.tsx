@@ -13,16 +13,58 @@ export type MappaEtichette = Map<string, HTMLDivElement>;
 const M_TEMP = new THREE.Matrix4();
 const V_TEMP = new THREE.Vector3();
 
-// fade per distanza dalla camera delle etichette nota (non god): piena entro
-// DIST_VICINO, spenta oltre DIST_LONTANO. Tarate sulla distanza tipica di un
-// fly-to (10 + size*3.5, vedi camera.tsx) cosi il vicinato si accende quando
-// ti avvicini a un cluster, senza affollare la vista d'insieme.
-const DIST_VICINO = 26;
-const DIST_LONTANO = 68;
+// stima larghezza carattere (px) per box di collisione, senza leggere il DOM
+// (offsetWidth forzerebbe un reflow per ogni etichetta a ogni frame). I god
+// node sono in grassetto 13px (piu larghi), le note 11.5px, le aree 12.5px.
+const CHAR_W_GOD = 7.6;
+const CHAR_W_NOTA = 6.3;
+const CHAR_W_AREA = 6.9;
+const RIGA_H = 16;
+const PAD_COLLISIONE = 3; // margine perche' i nomi non si tocchino
+
+// priorita: area > god > note (queste ordinate per dimensione stella)
+const P_AREA = 3;
+const P_GOD = 2;
+const P_NOTA = 1;
+
+interface Candidato {
+  el: HTMLDivElement;
+  prio: number;
+  peso: number; // dimensione stella (per ordinare le note fra loro)
+  sx: number;
+  sy: number;
+  // box schermo [sinistra, alto, destra, basso]
+  l: number;
+  t: number;
+  r: number;
+  b: number;
+}
+
+// lunghezza testo cache-ata per elemento (il testo non cambia mai)
+const LUNGHEZZE = new WeakMap<HTMLDivElement, number>();
+function lunghezzaTesto(el: HTMLDivElement): number {
+  let n = LUNGHEZZE.get(el);
+  if (n == null) {
+    n = (el.textContent ?? "").trim().length;
+    LUNGHEZZE.set(el, n);
+  }
+  return n;
+}
+
+function sovrappone(c: Candidato, occupati: Candidato[]): boolean {
+  for (const o of occupati) {
+    if (c.l < o.r && c.r > o.l && c.t < o.b && c.b > o.t) return true;
+  }
+  return false;
+}
 
 /**
- * Dentro il canvas: proietta le posizioni 3D e muove direttamente i div
- * delle etichette (niente setState per frame).
+ * Dentro il canvas: proietta le posizioni 3D, muove direttamente i div delle
+ * etichette e le declutter-a. Ogni nota ha un'etichetta, ma a ogni frame ne
+ * mostro solo quante ne stanno senza sovrapporsi (area e god node hanno la
+ * precedenza, le note fra loro per dimensione). Avvicinandosi a una zona i
+ * suoi nomi si distanziano sullo schermo e altri emergono: cosi' nessun nome
+ * e' perso e la vista d'insieme resta leggibile.
  */
 export function PonteEtichette({
   g,
@@ -34,57 +76,91 @@ export function PonteEtichette({
   const { camera, size } = useThree();
   const frame = useRef(0);
 
-  /* eslint-disable react-hooks/immutability --
-     useFrame gira nel loop rAF, non nel render: la mutazione diretta di
-     ref e stili DOM e il punto di questo componente (niente setState a 30fps) */
+  // useFrame gira nel loop rAF, non nel render: la mutazione diretta degli
+  // stili DOM e il punto di questo componente (niente setState a 30fps).
   useFrame(() => {
     frame.current += 1;
     if (frame.current % 2 !== 0) return; // 30fps bastano per le etichette
     M_TEMP.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
 
+    const nascondi = (el: HTMLDivElement) => {
+      el.style.opacity = "0";
+      el.style.visibility = "hidden";
+    };
+
+    // 1. raccogli i candidati visibili (dentro schermo, non filtrati) con box
+    const candidati: Candidato[] = [];
     for (const [chiave, el] of refs.current) {
       const [tipo, resto] = chiave.split("|", 2);
       let x = 0;
       let y = 0;
       let z = 0;
-      let opacita = 0;
+      let prio = P_NOTA;
+      let peso = 0;
       if (tipo === "area") {
         const a = g.ancoreAree[Number(resto)];
-        if (a) {
-          [x, y, z] = a.pos;
-          opacita = 0.9; // i nomi area restano sempre visibili, a qualsiasi zoom
+        if (!a) {
+          nascondi(el);
+          continue;
         }
+        [x, y, z] = a.pos;
+        prio = P_AREA;
       } else {
         const i = Number(resto);
+        if (g.vis[i] <= 0) {
+          nascondi(el);
+          continue;
+        }
         x = g.pos[i * 3];
         y = g.pos[i * 3 + 1];
         z = g.pos[i * 3 + 2];
-        // i god node restano sempre visibili; le altre note (ora TUTTE hanno
-        // un'etichetta) emergono avvicinandosi, come le micro-stelle sezione:
-        // altrimenti centinaia di nomi si accavallano in un blob illeggibile.
-        if (g.vis[i] > 0) {
-          if (g.flag[i] & F_GOD) {
-            opacita = 1;
-          } else {
-            const dx = x - camera.position.x;
-            const dy = y - camera.position.y;
-            const dz = z - camera.position.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            const t = THREE.MathUtils.clamp((DIST_LONTANO - dist) / (DIST_LONTANO - DIST_VICINO), 0, 1);
-            opacita = 0.85 * t;
-          }
-        }
+        prio = g.flag[i] & F_GOD ? P_GOD : P_NOTA;
+        peso = g.size[i];
       }
       V_TEMP.set(x, y, z).applyMatrix4(M_TEMP);
-      if (V_TEMP.z < -1 || V_TEMP.z > 1) opacita = 0; // dietro o fuori dalla camera
+      if (V_TEMP.z < -1 || V_TEMP.z > 1) {
+        nascondi(el);
+        continue;
+      }
       const sx = ((V_TEMP.x + 1) / 2) * size.width;
       const sy = ((1 - V_TEMP.y) / 2) * size.height;
-      el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
-      el.style.opacity = opacita.toFixed(2);
-      el.style.visibility = opacita <= 0.01 ? "hidden" : "visible";
+      const charW =
+        prio === P_AREA ? CHAR_W_AREA : prio === P_GOD ? CHAR_W_GOD : CHAR_W_NOTA;
+      const w = lunghezzaTesto(el) * charW;
+      // area: centrata sul punto; nota: a destra del punto, centrata in verticale
+      const cx = tipo === "area" ? sx : sx + 8 + w / 2;
+      candidati.push({
+        el,
+        prio,
+        peso,
+        sx,
+        sy,
+        l: cx - w / 2 - PAD_COLLISIONE,
+        r: cx + w / 2 + PAD_COLLISIONE,
+        t: sy - RIGA_H / 2 - PAD_COLLISIONE,
+        b: sy + RIGA_H / 2 + PAD_COLLISIONE,
+      });
+    }
+
+    // 2. ordina per priorita, poi per dimensione (le note grandi vincono)
+    candidati.sort((a, b) => b.prio - a.prio || b.peso - a.peso);
+
+    // 3. piazza in ordine: i nomi area sono ancore, sempre visibili; god e
+    // note passano dalla collisione (i god vincono per priorita, ma non si
+    // accavallano piu tra loro ne coprono le note)
+    const occupati: Candidato[] = [];
+    for (const c of candidati) {
+      const sempre = c.prio === P_AREA;
+      if (sempre || !sovrappone(c, occupati)) {
+        occupati.push(c);
+        c.el.style.transform = `translate(${c.sx.toFixed(1)}px, ${c.sy.toFixed(1)}px)`;
+        c.el.style.opacity = c.prio === P_GOD ? "1" : c.prio === P_AREA ? "0.9" : "0.85";
+        c.el.style.visibility = "visible";
+      } else {
+        nascondi(c.el);
+      }
     }
   });
-  /* eslint-enable react-hooks/immutability */
 
   return null;
 }
