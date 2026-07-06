@@ -230,10 +230,16 @@ export function ricoloraGalassia(g: Galassia, opz: OpzioniColore): void {
       c = GRIGIO_GAP;
     } else if (kind[i] === K_SEZIONE) {
       c = mix(basePer(i), STELLA, 0.45 + 0.3 * Math.min(1, r));
+    } else if (kind[i] === K_CONCETTO) {
+      // concetti: nuvola atmosferica dei bracci, restano chiari/azzurrati
+      // per la resa fotografica NGC (sono le migliaia di sub-nodi diffusi)
+      c = mix(basePer(i), STELLA, 0.34 + 0.3 * Math.min(1, r));
     } else {
-      c = mix(basePer(i), STELLA, 0.18 + 0.35 * Math.min(1, r));
-      if (flag[i] & F_GOD) c = mix(c, ORO_T, 0.55);
-      if (kind[i] === K_CONCETTO) c = mix(c, STELLA, 0.2);
+      // NOTE e documenti: il colore dell'area deve leggersi chiaramente su
+      // ogni nota; solo un lieve sollevamento radiale verso la stella per
+      // non spegnere del tutto la profondita fotografica.
+      c = mix(basePer(i), STELLA, 0.08 + 0.14 * Math.min(1, r));
+      if (flag[i] & F_GOD) c = mix(c, ORO_T, 0.5);
     }
     color[i * 3] = c[0];
     color[i * 3 + 1] = c[1];
