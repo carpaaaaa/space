@@ -71,6 +71,8 @@ export interface Filtri {
   soloGap: boolean;
   filamenti: boolean;
   sezioni: boolean;
+  /** etichette fisse (god nodes + note significative + nomi area) */
+  etichette: boolean;
 }
 
 export interface VolaA {
@@ -153,6 +155,7 @@ export const useUI = create<UIState>((set) => ({
     soloGap: false,
     filamenti: false,
     sezioni: true,
+    etichette: true,
   },
   filtriVersione: 0,
   setFiltri: (f) =>

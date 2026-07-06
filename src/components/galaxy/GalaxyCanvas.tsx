@@ -37,6 +37,7 @@ export default function GalaxyCanvas() {
   // caricamento (e ricaricamento quando il vault cambia su disco)
   const setGalassia = useUI((s) => s.setGalassia);
   const inGalassia = useUI((s) => s.pannello === "galassia");
+  const mostraEtichette = useUI((s) => s.filtri.etichette);
   const aspetto = useUI((s) => s.aspetto);
   const tema = temaPerId(aspetto.tema);
 
@@ -154,7 +155,9 @@ export default function GalaxyCanvas() {
         </Canvas>
       )}
 
-      {g && inGalassia && <EtichetteOverlay g={g} refs={etichetteRefs} soloGod={mobile} />}
+      {g && inGalassia && mostraEtichette && (
+        <EtichetteOverlay g={g} refs={etichetteRefs} soloGod={mobile} />
+      )}
       {g && inGalassia && <TooltipStella g={g} />}
 
       {!g && !errore && (

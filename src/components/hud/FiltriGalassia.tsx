@@ -75,6 +75,9 @@ export function FiltriGalassia() {
         <Toggle attivo={filtri.sezioni} onClick={() => setFiltri({ sezioni: !filtri.sezioni })}>
           sezioni
         </Toggle>
+        <Toggle attivo={filtri.etichette} onClick={() => setFiltri({ etichette: !filtri.etichette })}>
+          nomi
+        </Toggle>
       </div>
     </div>
   );
