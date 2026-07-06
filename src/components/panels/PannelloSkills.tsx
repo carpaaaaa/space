@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUI } from "@/state/store";
 import { TestataPannello, VuotoCaldo, useVaultJson } from "./comune";
 
@@ -19,10 +19,70 @@ interface SkillRiga {
   ogni?: string;
   evento?: string;
   dove?: string;
+  output?: string;
   motivazione?: string;
   ultimaEsecuzione?: string;
   esito?: "ok" | "errore";
   estratto: string;
+}
+
+/** Risultato di una skill: la nota che mantiene, resa inline nel pannello. */
+function RisultatoSkill({ rel }: { rel: string }) {
+  const vaultVersion = useUI((s) => s.vaultVersion);
+  const [html, setHtml] = useState<string | null>(null);
+  const [stato, setStato] = useState<"carico" | "vuoto" | "pronto" | "errore">("carico");
+
+  useEffect(() => {
+    let vivo = true;
+    setStato("carico");
+    fetch(`/api/note?rel=${encodeURIComponent(rel)}`)
+      .then(async (r) => {
+        if (r.status === 404) return { _vuoto: true };
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((d: { html?: string; _vuoto?: boolean }) => {
+        if (!vivo) return;
+        if (d._vuoto) setStato("vuoto");
+        else {
+          setHtml(d.html ?? "");
+          setStato("pronto");
+        }
+      })
+      .catch(() => vivo && setStato("errore"));
+    return () => {
+      vivo = false;
+    };
+  }, [rel, vaultVersion]);
+
+  if (stato === "carico") {
+    return (
+      <p className="mt-3 text-[12.5px]" style={{ color: "var(--inchiostro-3)" }}>
+        Leggo il risultato
+      </p>
+    );
+  }
+  if (stato === "vuoto") {
+    return (
+      <p className="mt-3 text-[12.5px]" style={{ color: "var(--inchiostro-2)" }}>
+        Ancora nessun risultato. Premi &quot;Esegui ora&quot; per generarlo.
+      </p>
+    );
+  }
+  if (stato === "errore") {
+    return (
+      <p className="mt-3 text-[12.5px]" style={{ color: "var(--errore)" }}>
+        Non riesco a leggere {rel}.
+      </p>
+    );
+  }
+  return (
+    <article
+      className="prosa mt-3 border-t pt-3 text-[13.5px]"
+      style={{ borderColor: "var(--linea)" }}
+      dangerouslySetInnerHTML={{ __html: html ?? "" }}
+    />
+  );
 }
 
 interface RispostaSkills {
@@ -58,6 +118,8 @@ export function PannelloSkills() {
   const apriNota = useUI((s) => s.apriNota);
   // rel -> feedback transitorio dopo un'azione ("in coda", "salvata")
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+  // rel -> risultato aperto inline
+  const [aperto, setAperto] = useState<Record<string, boolean>>({});
 
   const azione = async (rel: string, corpo: Record<string, string>, nota: string) => {
     try {
@@ -174,12 +236,22 @@ export function PannelloSkills() {
                 >
                   Esegui ora
                 </button>
+                {s.output && (
+                  <button
+                    type="button"
+                    className="bottone-secondario text-[12px]"
+                    aria-expanded={!!aperto[s.rel]}
+                    onClick={() => setAperto((a) => ({ ...a, [s.rel]: !a[s.rel] }))}
+                  >
+                    {aperto[s.rel] ? "Nascondi risultato" : "Risultato"}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="bottone-secondario text-[12px]"
                   onClick={() => apriNota(s.rel)}
                 >
-                  Apri
+                  Apri skill
                 </button>
                 {feedback[s.rel] && (
                   <span className="text-[12px]" style={{ color: "var(--inchiostro-2)" }}>
@@ -187,6 +259,8 @@ export function PannelloSkills() {
                   </span>
                 )}
               </div>
+
+              {s.output && aperto[s.rel] && <RisultatoSkill rel={s.output} />}
             </li>
           );
         })}

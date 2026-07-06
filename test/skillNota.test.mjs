@@ -55,6 +55,16 @@ test("trigger evento richiede dove", () => {
   assert.equal(r.skill?.evento, "nuova-nota");
 });
 
+test("campo output opzionale letto dal frontmatter", () => {
+  const conOut = VALIDA.replace(
+    "motivazione: prova",
+    "output: 02_FINANZE/Come va il mese.md\nmotivazione: prova"
+  );
+  assert.equal(parseSkillNota(conOut, "a.md").skill?.output, "02_FINANZE/Come va il mese.md");
+  // assente o vuoto -> undefined
+  assert.equal(parseSkillNota(VALIDA, "a.md").skill?.output, undefined);
+});
+
 test("campi runtime letti dal frontmatter", () => {
   const s = `---\ntipo: skill\nstato: attiva\ntrigger: comando\ncomando: a\nultima-esecuzione: "2026-07-04 09:01"\nesito: errore\n---\nx`;
   const r = parseSkillNota(s, "a.md");
