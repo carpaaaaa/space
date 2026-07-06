@@ -81,20 +81,29 @@ function resetSeNuovoGiorno(s: StatoRunner): void {
   }
 }
 
-/** Accoda un run. false = saltato (limite giornaliero o gia in coda). */
-export function accodaRun(skill: SkillDef, origine: OrigineRun): boolean {
+export interface EsitoAccoda {
+  accodato: boolean;
+  /** messaggio leggibile per la UI (perche' e' stato accodato o no) */
+  motivo: string;
+}
+
+/** Accoda un run e spiega l'esito (per un feedback onesto nella UI). */
+export function accodaRun(skill: SkillDef, origine: OrigineRun): EsitoAccoda {
   const s = stato();
   resetSeNuovoGiorno(s);
-  if (s.inEsecuzione === skill.rel || s.coda.some((r) => r.skill.rel === skill.rel)) {
-    return false; // gia in corso o in attesa
+  if (s.inEsecuzione === skill.rel) {
+    return { accodato: false, motivo: "già in esecuzione" };
+  }
+  if (s.coda.some((r) => r.skill.rel === skill.rel)) {
+    return { accodato: false, motivo: "già in coda" };
   }
   if (origine !== "manuale" && s.runOggi + s.coda.length >= skillsConfig().maxRunGiorno) {
     s.saltatiOggi += 1;
-    return false;
+    return { accodato: false, motivo: "limite giornaliero raggiunto" };
   }
   s.coda.push({ skill, origine });
   void lavora();
-  return true;
+  return { accodato: true, motivo: s.inEsecuzione ? "in coda" : "in esecuzione" };
 }
 
 async function scriviEsito(rel: string, esito: "ok" | "errore"): Promise<void> {

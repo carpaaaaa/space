@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.azione === "esegui") {
-    const accodato = accodaRun(skill, "manuale");
-    return Response.json({ ok: accodato, runner: statoRunner() });
+    const esito = accodaRun(skill, "manuale");
+    return Response.json({ ok: esito.accodato, motivo: esito.motivo, runner: statoRunner() });
   }
 
   return Response.json({ errore: "Azione sconosciuta" }, { status: 400 });

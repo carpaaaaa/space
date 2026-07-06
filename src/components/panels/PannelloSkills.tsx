@@ -128,15 +128,24 @@ export function PannelloSkills() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rel, ...corpo }),
       });
-      const j = (await r.json()) as { ok?: boolean; errore?: string };
+      const j = (await r.json()) as { ok?: boolean; motivo?: string; errore?: string };
+      // per "esegui" il runner spiega sempre l'esito (in esecuzione, gia' in
+      // coda, limite...): non e' un errore, e' informazione. Per "stato" uso
+      // il messaggio passato dal chiamante.
       setFeedback((f) => ({
         ...f,
-        [rel]: r.ok && j.ok !== false ? nota : (j.errore ?? "non riuscita"),
+        [rel]: j.motivo ?? (r.ok && j.ok !== false ? nota : j.errore ?? "non riuscita"),
       }));
     } catch {
       setFeedback((f) => ({ ...f, [rel]: "non riuscita" }));
     }
-    setTimeout(() => setFeedback((f) => ({ ...f, [rel]: "" })), 4000);
+    setTimeout(() => setFeedback((f) => ({ ...f, [rel]: "" })), 5000);
+  };
+
+  const esegui = (s: SkillRiga) => {
+    azione(s.rel, { azione: "esegui" }, "in esecuzione");
+    // apri subito il risultato: cosi lo vedi popolarsi appena il run finisce
+    if (s.output) setAperto((a) => ({ ...a, [s.rel]: true }));
   };
 
   const skills = [...(dati?.skills ?? [])].sort(
@@ -191,16 +200,22 @@ export function PannelloSkills() {
                 >
                   {s.stato}
                 </span>
-                {s.ultimaEsecuzione && (
-                  <span
-                    className="mono ml-auto text-[11px]"
-                    style={{
-                      color: s.esito === "errore" ? "var(--errore)" : "var(--inchiostro-3)",
-                    }}
-                  >
-                    {s.ultimaEsecuzione}
-                    {s.esito ? ` · ${s.esito}` : ""}
+                {dati?.runner.inEsecuzione === s.rel ? (
+                  <span className="mono ml-auto text-[11px]" style={{ color: "var(--oro-2)" }}>
+                    in esecuzione…
                   </span>
+                ) : (
+                  s.ultimaEsecuzione && (
+                    <span
+                      className="mono ml-auto text-[11px]"
+                      style={{
+                        color: s.esito === "errore" ? "var(--errore)" : "var(--inchiostro-3)",
+                      }}
+                    >
+                      {s.ultimaEsecuzione}
+                      {s.esito ? ` · ${s.esito}` : ""}
+                    </span>
+                  )
                 )}
               </div>
 
@@ -232,7 +247,7 @@ export function PannelloSkills() {
                 <button
                   type="button"
                   className="bottone-secondario text-[12px]"
-                  onClick={() => azione(s.rel, { azione: "esegui" }, "in coda")}
+                  onClick={() => esegui(s)}
                 >
                   Esegui ora
                 </button>
