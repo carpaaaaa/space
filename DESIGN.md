@@ -61,9 +61,8 @@ fondo scuro; il default in globals.css e solo un fallback.
 - Disco inclinato ~55 gradi come la foto NGC; camera orbitale con damping.
 - Stelle: sprite radiali additivi, alone morbido; god nodes con alone maggiorato.
 - Polvere: sprite seppia blending normale (occlude), corsie tra i bracci.
-- Etichette: HTML overlay, fisse su god nodes + fino a 3 note per area (non
-  solo le piu grandi in assoluto: cosi ogni area ha nomi visibili) + hover +
-  selezione + nomi area; toggle "nomi" nei filtri per mostrarle/nasconderle
-  tutte; fade con zoom.
+- Etichette: HTML overlay, fisse su ogni nota (non solo god nodes o le piu
+  grandi) + hover + selezione + nomi area; toggle "nomi" nei filtri per
+  mostrarle/nasconderle tutte se il vault cresce molto; fade con zoom.
 - Filamenti: edge on-demand (hover/selezione/toggle); sorprendenti in oro tenue.
 - Sfondo: campo stelle ambientale decorativo (dichiarato non-dato) + vignettatura.

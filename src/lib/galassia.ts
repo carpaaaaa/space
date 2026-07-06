@@ -125,28 +125,12 @@ export async function caricaGalassia(): Promise<Galassia> {
       });
     }
   }
-  // top-N per area (non solo le piu grandi in assoluto): senza questo, le
-  // aree piccole non avevano mai una nota etichettata. Tetto totale a
-  // parte per non affollare vault con molte aree.
-  const PER_AREA = 3;
-  const CAP_TOTALE = 48;
-  const perArea = new Map<number, number[]>();
-  for (const i of idxPrincipali) {
-    if (kind[i] !== K_NOTA || usati.has(i)) continue;
-    // niente etichette fisse per sistema e corsie di polvere: affollano
-    const area = payload.aree[areaIdx[i]];
-    if (!area || area.key === "sistema" || area.polvere) continue;
-    const arr = perArea.get(areaIdx[i]) ?? [];
-    arr.push(i);
-    perArea.set(areaIdx[i], arr);
-  }
-  const candidati: number[] = [];
-  for (const arr of perArea.values()) {
-    arr.sort((a, b) => size[b] - size[a]);
-    candidati.push(...arr.slice(0, PER_AREA));
-  }
-  const noteOrdinate = candidati.sort((a, b) => size[b] - size[a]).slice(0, CAP_TOTALE);
-  for (const i of noteOrdinate) {
+  // ogni nota ha il suo nome: nessuna quota, nessun tetto. Il toggle
+  // "nomi" nei filtri resta la valvola per un vault che cresce molto.
+  const tutteLeNote = idxPrincipali
+    .filter((i) => kind[i] === K_NOTA && !usati.has(i))
+    .sort((a, b) => size[b] - size[a]);
+  for (const i of tutteLeNote) {
     etichetteFisse.push({
       idx: i,
       testo: s.label[i],
